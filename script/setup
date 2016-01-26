@@ -1,6 +1,10 @@
 #!/bin/bash
+set -ex
 
-brew install glfw3
+brew install glfw3 pyqt
 pip install -r requirements.txt
 
-python -c "import vispy; vispy.test()"
+rm -f $VIRTUAL_ENV/lib/python*/site-packages/sip.so $VIRTUAL_ENV/lib/python*/site-packages/PyQt4
+
+# ln -s /usr/local/lib/python2.7/site-packages/PyQt4/ $VIRTUAL_ENV/lib/python*/site-packages
+# ln -s /usr/local/lib/python2.7/site-packages/sip.so $VIRTUAL_ENV/lib/python*/site-packages

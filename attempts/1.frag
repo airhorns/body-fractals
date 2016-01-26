@@ -4,42 +4,23 @@ uniform vec3 cameraPos;
 uniform vec3 cameraLookat;
 uniform vec3 lightDir;
 uniform vec3 lightColour;
-uniform float specular;
-uniform float specularHardness;
 uniform vec3 diffuse;
 uniform float ambientFactor;
 uniform bool ao;
 uniform bool shadows;
-uniform bool rotateWorld;
+// uniform bool rotateWorld;
 uniform bool antialias;
-uniform bool dof;
 
-uniform int Iterations;
-uniform float Scale;
-uniform float Size;
-uniform vec3 plnormal;
-uniform vec3 Offset;
-uniform float Angle1;
-uniform vec3 Rot1;
-uniform float Angle2;
-uniform vec3 Rot2;
-
-#define Phi (.5*(1.+sqrt(5.)))
-
-vec3 n1 = normalize(vec3(-Phi,Phi-1.0,1.0));
-vec3 n2 = normalize(vec3(1.0,-Phi,Phi+1.0));
-vec3 n3 = normalize(vec3(0.0,0.0,-1.0));
-mat4 M;
-
-#define BAILOUT 1000.0
-#define AO_SAMPLES 4
-#define RAY_DEPTH 128
-#define MAX_DEPTH 100.0
-#define SHADOW_RAY_DEPTH 24
-#define DISTANCE_MIN 0.0005
 #define PI 3.14159265
+#define GAMMA 0.8
+#define AO_SAMPLES 5
+#define RAY_DEPTH 256
+#define MAX_DEPTH 100.0
+#define SHADOW_RAY_DEPTH 32
+#define DISTANCE_MIN 0.01
 
-const vec2 delta = vec2(0.0001, 0.);
+const bool rotateWorld = true;
+const vec2 delta = vec2(DISTANCE_MIN, 0.);
 
 
 vec3 RotateY(vec3 p, float a)
@@ -53,34 +34,44 @@ vec3 RotateY(vec3 p, float a)
    return p;
 }
 
-// Icosahedral polyhedra Distance Estimator (Knighty 2011 some of the code is from Syntopia)
-// Original DE can be found here: https://github.com/Syntopia/Fragmentarium/blob/master/Fragmentarium-Source/Examples/Knighty%20Collection/Icosahedral_polyhedra_iterated_20.frag
-float Dist(vec3 z)
+float Plane(vec3 p, vec3 n)
 {
-   if (rotateWorld) z = RotateY(z, sin(time*0.05)*PI);
+   return dot(p, n);
+}
 
-   float dmin=10000.;
-   float s=1.;
-   for (int i=0; i<8; i++) {
-      float t;
-      // Folds. Dodecahedral
-      z = abs(z);
-      t=dot(z,n1); if (t>0.0) { z-=2.0*t*n1; }
-      t=dot(z,n2); if (t>0.0) { z-=2.0*t*n2; }
-      z = abs(z);
-      t=dot(z,n1); if (t>0.0) { z-=2.0*t*n1; }
-      t=dot(z,n2); if (t>0.0) { z-=2.0*t*n2; }
-      z = abs(z);
+// Formula for fractal from http://blog.hvidtfeldts.net/index.php/2011/08/distance-estimated-3d-fractals-iii-folding-space/
+float Fractal(vec3 pos)
+{
+   const int Iterations = 14;
+   const float Scale = 1.85;
+   const float Offset = 2.0;
 
-      // Rotate, scale, rotate (we need to cast to a 4-component vector).
-      z = (M*vec4(z,1.0)).xyz;
-      s /= Scale;
+  vec3 a1 = vec3(1,1,1);
+	vec3 a2 = vec3(-1,-1,1);
+	vec3 a3 = vec3(1,-1,-1);
+	vec3 a4 = vec3(-1,1,-1);
+	vec3 c;
+	float dist, d;
+	for (int n = 0; n < Iterations; n++)
+	{
+      if(pos.x+pos.y<0.) pos.xy = -pos.yx; // fold 1
+      if(pos.x+pos.z<0.) pos.xz = -pos.zx; // fold 2
+      if(pos.y+pos.z<0.) pos.zy = -pos.yz; // fold 3
+      pos = pos*Scale - Offset*(Scale-1.0);
+	}
+	return length(pos) * pow(Scale, -float(Iterations));
+}
 
-      if (i == Iterations) break;
-      if (dot(z,z) > BAILOUT) break;
-   }
-   //Distance to the plane going through vec3(Size,0.,0.) and which normal is plnormal
-   return abs(s*dot(z-vec3(Size,0.,0.), plnormal));
+// This should return continuous positive values when outside and negative values inside,
+// which roughly indicate the distance of the nearest surface.
+float Dist(vec3 pos)
+{
+   if (rotateWorld) pos = RotateY(pos, sin(time)*0.5);
+
+   return min(
+      Plane(pos-vec3(0.,-2.0,0.), vec3(0.,1.,0.)),
+      Fractal(pos)
+   );
 }
 
 // Based on original by IQ - optimized to remove a divide
@@ -101,13 +92,15 @@ float CalcAO(vec3 p, vec3 n)
 float SoftShadow(vec3 ro, vec3 rd, float k)
 {
    float res = 1.0;
-   float t = 0.1;          // min-t see http://www.iquilezles.org/www/articles/rmshadows/rmshadows.htm
+   float t = 0.01;          // min-t see http://www.iquilezles.org/www/articles/rmshadows/rmshadows.htm
    for (int i=0; i<SHADOW_RAY_DEPTH; i++)
    {
-      float h = Dist(ro + rd * t);
-      res = min(res, k*h/t);
-      t += h;
-      if (t > 10.0) break; // max-t
+      if (t < 25.0)  // max-t
+      {
+         float h = Dist(ro + rd * t);
+         res = min(res, k*h/t);
+         t += h;
+      }
    }
    return clamp(res, 0.0, 1.0);
 }
@@ -128,11 +121,9 @@ vec4 Shading(vec3 pos, vec3 rd, vec3 norm)
    vec3 light = lightColour * max(0.0, dot(norm, lightDir));
    vec3 heading = normalize(-rd + lightDir);
 
-   float spec = pow(max(0.0, dot(heading, norm)), specularHardness);
-   light = (diffuse * light) + (spec * specular * lightColour);
-   if (shadows) light *= SoftShadow(pos, lightDir, 16.0);
+   light = (diffuse * light);
+   if (shadows) light *= SoftShadow(pos, lightDir, 32.0);
    if (ao) light += CalcAO(pos, norm) * ambientFactor;
-
    return vec4(light, 1.0);
 }
 
@@ -144,6 +135,7 @@ vec3 Sky(in vec3 rd)
    vec3 sky = mix(vec3(.1, .2, .3), vec3(.32, .32, .32), v);
    sky += lightColour * sunAmount * sunAmount * .25 + lightColour * min(pow(sunAmount, 800.0)*1.5, .3);
 
+   sky = vec3(sin(time), cos(time), 1);
    return clamp(sky, 0.0, 1.0);
 }
 
@@ -179,40 +171,9 @@ vec4 March(vec3 ro, vec3 rd)
    return vec4(0.0);
 }
 
-mat4 rotationMatrix(vec3 v, float angle)
-{
-   float c = cos(radians(angle));
-   float s = sin(radians(angle));
-
-   return mat4(c + (1.0 - c) * v.x * v.x, (1.0 - c) * v.x * v.y - s * v.z, (1.0 - c) * v.x * v.z + s * v.y, 0.0,
-      (1.0 - c) * v.x * v.y + s * v.z, c + (1.0 - c) * v.y * v.y, (1.0 - c) * v.y * v.z - s * v.x, 0.0,
-      (1.0 - c) * v.x * v.z - s * v.y, (1.0 - c) * v.y * v.z + s * v.x, c + (1.0 - c) * v.z * v.z, 0.0,
-      0.0, 0.0, 0.0, 1.0);
-}
-
-mat4 translate(vec3 v) {
-   return mat4(1.0,0.0,0.0,0.0,
-      0.0,1.0,0.0,0.0,
-      0.0,0.0,1.0,0.0,
-      v.x,v.y,v.z,1.0);
-}
-
-mat4 scale4(float s) {
-   return mat4(s,0.0,0.0,0.0,
-      0.0,s,0.0,0.0,
-      0.0,0.0,s,0.0,
-      0.0,0.0,0.0,1.0);
-}
-
 void main()
 {
    const int ANTIALIAS_SAMPLES = 4;
-   const int DOF_SAMPLES = 8;
-
-   // precalc - once...
-   mat4 fracRotation2 = rotationMatrix(normalize(Rot2), Angle2);
-   mat4 fracRotation1 = rotationMatrix(normalize(Rot1), Angle1);
-   M = fracRotation2 * translate(Offset) * scale4(Scale) * translate(-Offset) * fracRotation1;
 
    vec4 res = vec4(0.0);
 
@@ -232,29 +193,6 @@ void main()
          ang += d_ang;
       }
       res.xyz /= float(ANTIALIAS_SAMPLES);
-   }
-   else if (dof)
-   {
-      vec2 p = gl_FragCoord.xy / resolution.xy;
-      vec3 ro = cameraPos;
-      vec3 rd = normalize(GetRay(cameraLookat-cameraPos, p));
-      vec4 _res = March(ro, rd);
-
-      float d_ang = 2.*PI / float(DOF_SAMPLES);
-      float ang = d_ang * 0.33333;
-      // cheap DOF!
-      float r = abs(cameraLookat.z - _res.z) * 3.0;
-      for (int i = 0; i < DOF_SAMPLES; i++)
-      {
-         p = vec2((gl_FragCoord.x + cos(ang)*r) / resolution.x, (gl_FragCoord.y + sin(ang)*r) / resolution.y);
-         ro = cameraPos;
-         rd = normalize(GetRay(cameraLookat-cameraPos, p));
-         _res = March(ro, rd);
-         if (_res.a == 1.0) res.xyz += clamp(Shading(_res.xyz, rd, GetNormal(_res.xyz)).xyz, 0.0, 1.0);
-         else res.xyz += Sky(rd);
-         ang += d_ang;
-      }
-      res.xyz /= float(DOF_SAMPLES);
    }
    else
    {
