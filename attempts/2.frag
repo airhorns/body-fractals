@@ -41,7 +41,7 @@ float Plane(vec3 p, vec3 n)
 // Formula for fractal from http://blog.hvidtfeldts.net/index.php/2011/08/distance-estimated-3d-fractals-iii-folding-space/
 float Fractal(vec3 pos)
 {
-   const int Iterations = 14;
+   const int Iterations = 30;
    const float Scale = 1.85;
    const float Offset = 2.0;
 
@@ -56,7 +56,7 @@ float Fractal(vec3 pos)
       if(pos.x+pos.y<0.) pos.xy = -pos.yx; // fold 1
       if(pos.x+pos.z<0.) pos.xz = -pos.zx; // fold 2
       if(pos.y+pos.z<0.) pos.zy = -pos.yz; // fold 3
-      pos = RotateY(pos, 0.25*PI);
+      pos = RotateY(pos, 0.05*PI);
 
       pos = pos*Scale - Offset*(Scale-1.0);
 	}
