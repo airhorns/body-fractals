@@ -6,10 +6,10 @@ uniform vec3 lightDir;
 uniform vec3 lightColour;
 uniform vec3 diffuse;
 uniform float ambientFactor;
-// uniform bool ao;
-// uniform bool shadows;
+uniform bool ao;
+uniform bool shadows;
 uniform bool rotateWorld;
-// uniform bool antialias;
+uniform bool antialias;
 
 #define PI 3.14159265
 #define GAMMA 0.8
@@ -19,10 +19,7 @@ uniform bool rotateWorld;
 #define SHADOW_RAY_DEPTH 32
 #define DISTANCE_MIN 0.01
 
-const bool ao = true;
-const bool shadows = true;
-const bool antialias = false;
-const vec2 delta = vec2(DISTANCE_MIN, 0.);
+onst vec2 delta = vec2(DISTANCE_MIN, 0.);
 
 
 vec3 RotateY(vec3 p, float a)
@@ -59,6 +56,8 @@ float Fractal(vec3 pos)
       if(pos.x+pos.y<0.) pos.xy = -pos.yx; // fold 1
       if(pos.x+pos.z<0.) pos.xz = -pos.zx; // fold 2
       if(pos.y+pos.z<0.) pos.zy = -pos.yz; // fold 3
+      pos = RotateY(pos, 0.25*PI);
+
       pos = pos*Scale - Offset*(Scale-1.0);
 	}
 	return length(pos) * pow(Scale, -float(Iterations));
