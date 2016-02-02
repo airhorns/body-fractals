@@ -19,7 +19,7 @@ uniform bool antialias;
 #define SHADOW_RAY_DEPTH 32
 #define DISTANCE_MIN 0.01
 
-onst vec2 delta = vec2(DISTANCE_MIN, 0.);
+const vec2 delta = vec2(DISTANCE_MIN, 0.);
 
 
 vec3 RotateY(vec3 p, float a)
