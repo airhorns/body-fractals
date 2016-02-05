@@ -10,6 +10,8 @@ uniform bool ao;
 uniform bool shadows;
 uniform bool rotateWorld;
 uniform bool antialias;
+uniform float Scale;
+uniform float Offset;
 
 #define PI 3.14159265
 #define GAMMA 0.8
@@ -33,41 +35,81 @@ vec3 RotateY(vec3 p, float a)
    return p;
 }
 
+vec2 rotate(vec2 v, float a) {
+	return vec2(cos(a)*v.x + sin(a)*v.y, -sin(a)*v.x + cos(a)*v.y);
+}
+
+float trap(vec3 p){
+	// return  length(p.x-0.5-0.5*sin(time/10.0)); // <- cube forms
+	//return  length(p.x-1.0);
+	//return length(p.xz-vec2(1.0,1.0))-0.05; // <- tube forms
+	return length(p); // <- no trap
+}
+
 float Plane(vec3 p, vec3 n)
 {
    return dot(p, n);
 }
 
 // Formula for fractal from http://blog.hvidtfeldts.net/index.php/2011/08/distance-estimated-3d-fractals-iii-folding-space/
-float Fractal(vec3 pos)
+// float Fractal(vec3 pos)
+// {
+//    const int Iterations = 30;
+//
+//   vec3 a1 = vec3(1,1,1);
+// 	vec3 a2 = vec3(-1,-1,1);
+// 	vec3 a3 = vec3(1,-1,-1);
+// 	vec3 a4 = vec3(-1,1,-1);
+// 	vec3 c;
+// 	float dist, d;
+// 	for (int n = 0; n < Iterations; n++)
+// 	{
+//       pos = RotateY(pos, 0.02*PI);
+//       if(pos.x+pos.y<0.) pos.xy = -pos.yx; // fold 1
+//       if(pos.x+pos.z<0.) pos.xz = -pos.zx; // fold 2
+//       if(pos.y+pos.z<0.) pos.zy = -pos.yz; // fold 3
+//
+//       pos = pos*Scale - Offset*(Scale-1.0);
+// 	}
+// 	return length(pos) * pow(Scale, -float(Iterations));
+// }
+
+// from https://www.shadertoy.com/view/XsX3z7
+float Fractal(in vec3 z)
 {
-   const int Iterations = 30;
-   const float Scale = 1.85;
-   const float Offset = 2.0;
+	// // Folding 'tiling' of 3D space;
+	// z  = abs(1.0-mod(z,2.0));
 
-  vec3 a1 = vec3(1,1,1);
-	vec3 a2 = vec3(-1,-1,1);
-	vec3 a3 = vec3(1,-1,-1);
-	vec3 a4 = vec3(-1,1,-1);
-	vec3 c;
-	float dist, d;
-	for (int n = 0; n < Iterations; n++)
-	{
-      if(pos.x+pos.y<0.) pos.xy = -pos.yx; // fold 1
-      if(pos.x+pos.z<0.) pos.xz = -pos.zx; // fold 2
-      if(pos.y+pos.z<0.) pos.zy = -pos.yz; // fold 3
-      pos = RotateY(pos, 0.05*PI);
+  const int Iterations = 12;
 
-      pos = pos*Scale - Offset*(Scale-1.0);
+	float d = 1000.0;
+	float r;
+	for (int n = 0; n < Iterations; n++) {
+		z.xz = rotate(z.xz, time/18.0);
+
+		// This is octahedral symmetry,
+		// with some 'abs' functions thrown in for good measure.
+		if (z.x+z.y<0.0) z.xy = -z.yx;
+		z = abs(z);
+		if (z.x+z.z<0.0) z.xz = -z.zx;
+		z = abs(z);
+		if (z.x-z.y<0.0) z.xy = z.yx;
+		z = abs(z);
+		if (z.x-z.z<0.0) z.xz = z.zx;
+		z = z*Scale - Offset*(Scale-1.0);
+		z.yz = rotate(z.yz, -time/18.0);
+
+		d = min(d, trap(z) * pow(Scale, -float(n+1)));
 	}
-	return length(pos) * pow(Scale, -float(Iterations));
+	return d;
 }
+
 
 // This should return continuous positive values when outside and negative values inside,
 // which roughly indicate the distance of the nearest surface.
 float Dist(vec3 pos)
 {
-   if (rotateWorld) pos = RotateY(pos, sin(time)*0.5);
+   if (rotateWorld) pos = RotateY(pos, time*0.025);
 
    return min(
       Plane(pos-vec3(0.,-2.0,0.), vec3(0.,1.,0.)),

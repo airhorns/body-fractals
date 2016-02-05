@@ -30,6 +30,8 @@ class Canvas(app.Canvas):
         self.program['ao'] = True
         self.program['shadows'] = True
         self.program['antialias'] = False
+        self.program['Scale'] = 3
+        self.program['Offset'] = 2
 
         self.apply_zoom()
 
@@ -38,7 +40,6 @@ class Canvas(app.Canvas):
         self.show()
 
     def on_draw(self, event):
-        gloo.clear()
         self.program['time'] = time.time() - self._starttime
         self.program.draw()
 
@@ -51,6 +52,22 @@ class Canvas(app.Canvas):
         gloo.set_viewport(0, 0, width, height)
         self.program['resolution'] = [width, height]
 
+    def on_key_press(self, event):
+        params = [('Scale', 0.1), ('Offset', 0.1)]
+        top_keys = ('a', 's', 'd', 'f', 'g', 'h', 'j')
+        bottom_keys = ('z', 'x', 'c', 'v', 'b', 'n', 'm')
+
+        if event.text in top_keys:
+            param, adjustment = params[top_keys.index(event.text)]
+        elif event.text in bottom_keys:
+            param, adjustment = params[bottom_keys.index(event.text)]
+            adjustment *= -1
+        else:
+            return
+
+        print "Setting %s to %s" % (param, self.program[param] + adjustment)
+        self.program[param] += adjustment
+
 if __name__ == '__main__':
-    canvas = Canvas(size=(200, 200), keys='interactive')
+    canvas = Canvas(size=(400, 400), keys='interactive')
     app.run()
