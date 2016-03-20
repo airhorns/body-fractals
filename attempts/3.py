@@ -1,6 +1,8 @@
 from vispy import app, gloo, set_log_level
 import os.path
+import numpy as np
 import time
+from utils import normalize
 
 
 set_log_level('INFO')
@@ -22,7 +24,7 @@ class Canvas(app.Canvas):
 
         self.program['cameraPos'] = (0.0, 3.0, -6.0)
         self.program['cameraLookat'] = (0.0, -0.85, 0.5)
-        self.program['lightDir'] = (-1.4, 0.8, -1.0)  # needs to be normalized
+        self.program['lightDir'] = normalize(np.array((-1, -1, -1)))  # needs to be normalized
         self.program['lightColour'] = (1.4, 3.0, 0.3)
         self.program['diffuse'] = (0.27, 0.27, 0.27)
         self.program['ambientFactor'] = 0.45
@@ -30,6 +32,8 @@ class Canvas(app.Canvas):
         self.program['scale'] = 1.5
         self.program['offset'] = 1.8
         self.program['cubeWidth'] = 1
+        self.program['angleA'] = 1
+        self.program['angleB'] = 1
 
         self.apply_zoom()
 
@@ -51,7 +55,7 @@ class Canvas(app.Canvas):
         self.program['resolution'] = [width, height]
 
     def on_key_press(self, event):
-        params = [('scale', 0.1), ('offset', 0.1), ('ambientFactor', 0.05), ('cubeWidth', 0.1)]
+        params = [('scale', 0.1), ('offset', 0.1), ('ambientFactor', 0.05), ('cubeWidth', 0.1), ('angleA', 0.01), ('angleB', 0.01)]
         top_keys = ('a', 's', 'd', 'f', 'g', 'h', 'j')
         bottom_keys = ('z', 'x', 'c', 'v', 'b', 'n', 'm')
 

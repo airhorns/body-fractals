@@ -11,6 +11,8 @@ uniform bool antialias;
 uniform float scale;
 uniform float offset;
 uniform float cubeWidth;
+uniform float angleA;
+uniform float angleB;
 
 #define PI 3.14159265
 #define GAMMA 0.8
@@ -40,8 +42,8 @@ vec2 rotate(vec2 v, float a) {
 
 float trap(vec3 p){
 	// return  length(p.x-1.0); // unit cube
-	// return  length(p.x-cubeWidth; // <- cube forms
-  return  length(p.x-0.5-0.5*sin(time/10.0)); // <- cube forms
+	return  length(p.x-cubeWidth); // <- cube forms
+  // return  length(p.x-0.5-0.5*sin(time/10.0)); // <- cube forms
 	// return length(p.xz-vec2(1.0,1.0))-0.05; // <- tube forms
 	// return length(p); // <- no trap
 }
@@ -54,7 +56,7 @@ float KaleidoscopeIFS(in vec3 z)
 	float d = 1000.0;
 	float r;
 	for (int n = 0; n < Iterations; n++) {
-		z.xz = rotate(z.xz, time/18.0);
+		z.xz = rotate(z.xz, angleA);
 
 		// This is octahedral symmetry,
 		// with some 'abs' functions thrown in for good measure.
@@ -66,7 +68,7 @@ float KaleidoscopeIFS(in vec3 z)
 		z = abs(z);
 		if (z.x-z.z<0.0) z.xz = z.zx;
 		z = z*scale - offset*(scale-1.0);
-		z.yz = rotate(z.yz, -time/18.0);
+		z.yz = rotate(z.yz, angleB);
 
 		d = min(d, trap(z) * pow(scale, -float(n+1)));
 	}
@@ -150,8 +152,8 @@ vec3 Mandelbulb(vec3 p) {
 float Dist(vec3 pos) {
    if (rotateWorld) pos = RotateY(pos, time*0.025);
 
-  //  return Fractal(pos);
-  return Mandelbulb(pos).x;
+  return KaleidoscopeIFS(pos);
+  // return Mandelbulb(pos).x;
 }
 
 // Based on original by IQ - optimized to remove a divide
@@ -175,14 +177,31 @@ vec3 GetNormal(vec3 pos) {
    return normalize(n);
 }
 
+float SoftShadow(vec3 ro, vec3 rd, float k)
+{
+   float res = 1.0;
+   float t = 0.01;          // min-t see http://www.iquilezles.org/www/articles/rmshadows/rmshadows.htm
+   for (int i=0; i<SHADOW_RAY_DEPTH; i++)
+   {
+      if (t < 25.0)  // max-t
+      {
+         float h = Dist(ro + rd * t);
+         res = min(res, k*h/t);
+         t += h;
+      }
+   }
+   return clamp(res, 0.0, 1.0);
+}
+
 // Based on a shading method by Ben Weston. Added AO and SoftShadows to original.
 vec4 Shading(vec3 pos, vec3 rd, vec3 norm) {
-   vec3 light = lightColour * max(0.0, dot(norm, lightDir));
-   vec3 heading = normalize(-rd + lightDir);
+  vec3 light = lightColour * max(0.0, dot(norm, lightDir));
+  vec3 heading = normalize(-rd + lightDir);
 
-   light = (diffuse * light);
-   light += CalcAO(pos, norm) * ambientFactor;
-   return vec4(light, 1.0);
+  light = (diffuse * light);
+  light *= SoftShadow(pos, lightDir, 32.0);
+  light += CalcAO(pos, norm) * ambientFactor;
+  return vec4(light, 1.0);
 }
 
 // Camera function by TekF
@@ -215,6 +234,8 @@ vec4 March(vec3 ro, vec3 rd) {
    return vec4(0.0);
 }
 
+ // https://www.shadertoy.com/view/ltfSWn
+
 void main() {
   const int ANTIALIAS_SAMPLES = 4;
 
@@ -231,7 +252,8 @@ void main() {
      if (_res.a == 1.0) {
         res.xyz += clamp(Shading(_res.xyz, rd, GetNormal(_res.xyz)).xyz, 0.0, 1.0);
      } else {
-        res.xyz = vec3(0.49, 0.5, 0.51);  // a nice grey to match my terminal
+        res.xyz = scale * vec3(0.8, 0.95, 1.0) * (0.7 + 0.3 * rd.y);
+    		res.xyz += vec3(0.8, 0.7, 0.5) * pow(clamp(dot(rd, lightDir), 0.0, 1.0), 32.0);
      }
      ang += d_ang;
   }
