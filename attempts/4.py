@@ -73,5 +73,5 @@ class Canvas(app.Canvas):
         self.program[param] += adjustment
 
 if __name__ == '__main__':
-    canvas = Canvas(size=(400, 400), keys='interactive')
+    canvas = Canvas(size=(400, 400), keys='interactive', always_on_top=True)
     app.run()
