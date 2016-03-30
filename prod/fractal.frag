@@ -12,7 +12,7 @@ uniform float modelScale;
 uniform float iterationScale;
 uniform float iterationOffset;
 uniform float iterations;
-uniform float trapWidth;
+uniform float cubeWidth;
 uniform float angleA;
 uniform float angleB;
 
@@ -26,6 +26,24 @@ uniform float angleB;
 
 const vec2 delta = vec2(DISTANCE_MIN, 0.);
 
+
+vec3 rgb2hsv(vec3 c)
+{
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+    float d = q.x - min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+vec3 hsv2rgb(vec3 c)
+{
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
 
 vec3 RotateY(vec3 p, float a)
 {
@@ -44,22 +62,25 @@ vec2 rotate(vec2 v, float a) {
 
 float trap(vec3 p){
   // return  length(p.x-1.0); // unit cube
-  return length(p.x-(trapWidth*modelScale)); // <- cube forms
+  return length(p.x-(cubeWidth*modelScale)); // <- cube forms
   // return  length(p.x-0.5-0.5*sin(time/10.0)); // <- cube forms
   // return length(p.xz-vec2(1.0,1.0))-0.05; // <- tube forms
   // return length(p); // <- no trap
 }
 
-// from https://www.shadertoy.com/view/XsX3z7
-float KaleidoscopeIFS(in vec3 z)
-{
+vec3 colorTrap(vec3 p) {
+  return p;
+}
 
-  float d = 1000.0;
+// from https://www.shadertoy.com/view/XsX3z7
+float KaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
+  float pointDistance = 1000.0;
+  trapDistance = vec3(1000.0, 1000.0, 1000.0);
   float r;
+
   z = z * modelScale;
   for (int n = 0; n < iterations; n++) {
     z.xz = rotate(z.xz, angleA);
-
     // This is octahedral symmetry,
     // with some 'abs' functions thrown in for good measure.
     if (z.x+z.y<0.0) z.xy = -z.yx;
@@ -72,9 +93,11 @@ float KaleidoscopeIFS(in vec3 z)
     z = (z*iterationScale - iterationOffset * (iterationScale-1.0));
     z.yz = rotate(z.yz, angleB);
 
-    d = min(d, trap(z) * pow(iterationScale, -float(n+1)));
+    float iterationFactor = pow(iterationScale, -float(n+1));
+    trapDistance = min(trapDistance, colorTrap(z) * iterationFactor);
+    pointDistance = min(pointDistance, trap(z) * iterationFactor);
   }
-  return d;
+  return pointDistance;
 }
 
 //--------------------------------------------------------------------------------
@@ -151,10 +174,10 @@ vec3 Mandelbulb(vec3 p) {
 
 // This should return continuous positive values when outside and negative values inside,
 // which roughly indicate the distance of the nearest surface.
-float Dist(vec3 pos) {
+float Dist(vec3 pos, out vec3 trapDistance) {
    if (rotateWorld) pos = RotateY(pos, time*0.025);
 
-  return KaleidoscopeIFS(pos);
+  return KaleidoscopeIFS(pos, trapDistance);
   // return Mandelbulb(pos).x;
 }
 
@@ -162,9 +185,10 @@ float Dist(vec3 pos) {
 float CalcAO(vec3 p, vec3 n) {
    float r = 0.0;
    float w = 1.0;
+   vec3 tmp;
    for (int i=1; i<=AO_SAMPLES; i++) {
       float d0 = float(i) * 0.3;
-      r += w * (d0 - Dist(p + n * d0));
+      r += w * (d0 - Dist(p + n * d0, tmp));
       w *= 0.5;
    }
    return 1.0 - clamp(r,0.0,1.0);
@@ -172,9 +196,10 @@ float CalcAO(vec3 p, vec3 n) {
 
 vec3 GetNormal(vec3 pos) {
    vec3 n;
-   n.x = Dist( pos + delta.xyy ) - Dist( pos - delta.xyy );
-   n.y = Dist( pos + delta.yxy ) - Dist( pos - delta.yxy );
-   n.z = Dist( pos + delta.yyx ) - Dist( pos - delta.yyx );
+   vec3 tmp;
+   n.x = Dist(pos + delta.xyy, tmp) - Dist(pos - delta.xyy, tmp);
+   n.y = Dist(pos + delta.yxy, tmp) - Dist(pos - delta.yxy, tmp);
+   n.z = Dist(pos + delta.yyx, tmp) - Dist(pos - delta.yyx, tmp);
 
    return normalize(n);
 }
@@ -183,11 +208,12 @@ float SoftShadow(vec3 ro, vec3 rd, float k)
 {
    float res = 1.0;
    float t = 0.01;          // min-t see http://www.iquilezles.org/www/articles/rmshadows/rmshadows.htm
+   vec3 tmp;
    for (int i=0; i<SHADOW_RAY_DEPTH; i++)
    {
       if (t < 25.0)  // max-t
       {
-         float h = Dist(ro + rd * t);
+         float h = Dist(ro + rd * t, tmp);
          res = min(res, k*h/t);
          t += h;
       }
@@ -196,8 +222,9 @@ float SoftShadow(vec3 ro, vec3 rd, float k)
 }
 
 // Based on a shading method by Ben Weston. Added AO and SoftShadows to original.
-vec4 Shading(vec3 pos, vec3 rd, vec3 norm) {
-  vec3 light = lightColour * max(0.0, dot(norm, lightDir));
+vec4 Shading(vec3 pos, vec3 rd, vec3 norm, vec3 trapDistance) {
+  vec3 color = hsv2rgb(vec3(rgb2hsv(normalize(trapDistance)).rg, 0.6));
+  vec3 light = color * max(0.0, dot(norm, lightDir));
 
   light = (diffuse * light);
   light *= SoftShadow(pos, lightDir, 16.0);
@@ -218,13 +245,13 @@ vec3 GetRay(vec3 dir, vec2 pos) {
    return dir + right*pos.x + up*pos.y;
 }
 
-vec4 March(vec3 ro, vec3 rd) {
+vec4 March(vec3 ro, vec3 rd, out vec3 trapDistance) {
    float t = 0.0;
    float d = 1.0;
    for (int i=0; i<RAY_DEPTH; i++)
    {
       vec3 p = ro + rd * t;
-      d = Dist(p);
+      d = Dist(p, trapDistance);
       if (abs(d) < DISTANCE_MIN)
       {
          return vec4(p, 1.0);
@@ -245,13 +272,16 @@ void main() {
   float d_ang = 2.*PI / float(ANTIALIAS_SAMPLES);
   float ang = d_ang * 0.33333;
   float r = 0.3;
+
   for (int i = 0; i < ANTIALIAS_SAMPLES; i++) {
      vec2 p = vec2((gl_FragCoord.x + cos(ang)*r) / resolution.x, (gl_FragCoord.y + sin(ang)*r) / resolution.y);
      vec3 ro = cameraPos;
      vec3 rd = normalize(GetRay(cameraLookat-cameraPos, p));
-     vec4 _res = March(ro, rd);
+     vec3 trapDistance;
+     vec4 _res = March(ro, rd, trapDistance);
+
      if (_res.a == 1.0) {
-        res.rgb += clamp(Shading(_res.rgb, rd, GetNormal(_res.rgb)).rgb, 0.0, 1.0);
+        res.rgb += clamp(Shading(_res.rgb, rd, GetNormal(_res.rgb), trapDistance).rgb, 0.0, 1.0);
      } else {
         res.rgb = vec3(0.8, 0.95, 1.0) * (0.7 + 0.3 * rd.y);
         res.rgb += vec3(0.8, 0.7, 0.5) * pow(clamp(dot(rd, lightDir), 0.0, 1.0), 32.0);
