@@ -44,7 +44,6 @@ class Canvas(app.Canvas):
         frame_data = np.array(frame.get_depth_frame().get_buffer_as_uint8(), dtype=np.uint8)
         frame_data.shape = (480, 640, 2)
 
-
         for user in frame.users:
             if user.is_new():
                 print "%s: new: %s, visible: %s, lost: %s, skeleton state: %s" % (user.id, user.is_new(), user.is_visible(), user.is_lost(), user.skeleton.state)

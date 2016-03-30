@@ -25,7 +25,6 @@ class Canvas(app.Canvas):
         self.program['cameraPos'] = (0.0, 3.0, -6.0)
         self.program['cameraLookat'] = (0.0, 0.0, 0.0)
         self.program['lightDir'] = normalize(np.array((1, 1, -1.5)))  # needs to be normalized
-        self.program['lightColour'] = (0.5, 0.5, 1)
         self.program['diffuse'] = (1, 1, 1)
         self.program['ambientFactor'] = 0.45
         self.program['rotateWorld'] = True
