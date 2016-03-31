@@ -22,8 +22,8 @@ class FractalProgram(gloo.Program):
         self['lightColour'] = (0.5, 0.5, 1)
         self['diffuse'] = (1, 1, 1)
         self['ambientFactor'] = 0.45
-        self['rotateWorld'] = True
         self['resolution'] = [10, 10]
+        self['modelScale'] = 1
 
         for param, param_description in self.definition['params'].iteritems():
             self[param] = param_description['initial']

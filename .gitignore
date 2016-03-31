@@ -1,3 +1,6 @@
 .venv
 shader-school
 *.pyc
+*.dylib
+NiTE2
+test-data/*

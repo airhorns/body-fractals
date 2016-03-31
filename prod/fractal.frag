@@ -3,16 +3,14 @@ uniform vec2 resolution;
 uniform vec3 cameraPos;
 uniform vec3 cameraLookat;
 uniform vec3 lightDir;
-uniform vec3 lightColour;
 uniform vec3 diffuse;
 uniform float ambientFactor;
-uniform bool rotateWorld;
 uniform bool antialias;
 uniform float modelScale;
 uniform float iterationScale;
 uniform float iterationOffset;
 uniform float iterations;
-uniform float cubeWidth;
+uniform float trapWidth;
 uniform float angleA;
 uniform float angleB;
 
@@ -62,7 +60,7 @@ vec2 rotate(vec2 v, float a) {
 
 float trap(vec3 p){
   // return  length(p.x-1.0); // unit cube
-  return length(p.x-(cubeWidth*modelScale)); // <- cube forms
+  return length(p.x-(trapWidth*modelScale)); // <- cube forms
   // return  length(p.x-0.5-0.5*sin(time/10.0)); // <- cube forms
   // return length(p.xz-vec2(1.0,1.0))-0.05; // <- tube forms
   // return length(p); // <- no trap
@@ -73,7 +71,7 @@ vec3 colorTrap(vec3 p) {
 }
 
 // from https://www.shadertoy.com/view/XsX3z7
-float KaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
+float OctoKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   float pointDistance = 1000.0;
   trapDistance = vec3(1000.0, 1000.0, 1000.0);
   float r;
@@ -99,6 +97,34 @@ float KaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   }
   return pointDistance;
 }
+
+float TetraKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
+  float pointDistance = 1000.0;
+  trapDistance = vec3(1000.0, 1000.0, 1000.0);
+  float r;
+
+  z = z * modelScale;
+  for (int n = 0; n < iterations; n++) {
+    z.xz = rotate(z.xz, angleA);
+    // This is octahedral symmetry,
+    // with some 'abs' functions thrown in for good measure.
+    if (z.x+z.y<0.0) z.xy = -z.yx;
+    z = abs(z);
+    if (z.x+z.z<0.0) z.xz = -z.zx;
+    z = abs(z);
+    if (z.x-z.y<0.0) z.xy = z.yx;
+    z = abs(z);
+    if (z.x-z.z<0.0) z.xz = z.zx;
+    z = (z*iterationScale - iterationOffset * (iterationScale-1.0));
+    z.yz = rotate(z.yz, angleB);
+
+    float iterationFactor = pow(iterationScale, -float(n+1));
+    trapDistance = min(trapDistance, colorTrap(z) * iterationFactor);
+    pointDistance = min(pointDistance, trap(z) * iterationFactor);
+  }
+  return pointDistance;
+}
+
 
 //--------------------------------------------------------------------------------
 // quaternion manipulation
@@ -175,9 +201,10 @@ vec3 Mandelbulb(vec3 p) {
 // This should return continuous positive values when outside and negative values inside,
 // which roughly indicate the distance of the nearest surface.
 float Dist(vec3 pos, out vec3 trapDistance) {
-   if (rotateWorld) pos = RotateY(pos, time*0.025);
+   pos = RotateY(pos, time*0.025);
 
-  return KaleidoscopeIFS(pos, trapDistance);
+  // return OctoKaleidoscopeIFS(pos, trapDistance);
+  return TetraKaleidoscopeIFS(pos, trapDistance);
   // return Mandelbulb(pos).x;
 }
 
@@ -223,7 +250,7 @@ float SoftShadow(vec3 ro, vec3 rd, float k)
 
 // Based on a shading method by Ben Weston. Added AO and SoftShadows to original.
 vec4 Shading(vec3 pos, vec3 rd, vec3 norm, vec3 trapDistance) {
-  vec3 color = hsv2rgb(vec3(rgb2hsv(normalize(trapDistance)).rg, 0.6));
+  vec3 color = hsv2rgb(vec3(rgb2hsv(normalize(trapDistance)).rg, 0.4));
   vec3 light = color * max(0.0, dot(norm, lightDir));
 
   light = (diffuse * light);

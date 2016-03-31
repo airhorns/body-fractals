@@ -14,7 +14,7 @@ class SkeletonInput(object):
         return {
             'angleA': self.joint_angle_relative_to_joint(joints[JOINT_TYPES.NITE_JOINT_LEFT_ELBOW], joints[JOINT_TYPES.NITE_JOINT_LEFT_SHOULDER], joints[JOINT_TYPES.NITE_JOINT_LEFT_HAND]),
             'angleB': self.joint_angle_relative_to_joint(joints[JOINT_TYPES.NITE_JOINT_RIGHT_ELBOW], joints[JOINT_TYPES.NITE_JOINT_RIGHT_SHOULDER], joints[JOINT_TYPES.NITE_JOINT_RIGHT_HAND]),
-            'modelScale': self.joint_distance_in_space(joints[JOINT_TYPES.NITE_JOINT_LEFT_HAND], joints[JOINT_TYPES.NITE_JOINT_RIGHT_HAND], 180, 800)
+            # 'modelScale': self.joint_distance_in_space(joints[JOINT_TYPES.NITE_JOINT_LEFT_HAND], joints[JOINT_TYPES.NITE_JOINT_RIGHT_HAND], 180, 800)
         }
 
     def joint_angle_relative_to_joint(self, root, appendage_a, appendage_b):
@@ -26,7 +26,6 @@ class SkeletonInput(object):
 
     def joint_distance_in_space(self, joint_a, joint_b, lower_bound, upper_bound):
         raw_distance = np.linalg.norm(joint_to_array(joint_a) - joint_to_array(joint_b))
-        print raw_distance
         return np.clip((raw_distance - lower_bound) / upper_bound, 0, 1)
 
     def joint_angle_relative_to_screen(self, joint):

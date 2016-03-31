@@ -18,7 +18,7 @@ class MainCanvas(app.Canvas):
         nite2.initialize()
         self.user_tracker = nite2.UserTracker(False)
         self.user_tracker.skeleton_smoothing_factor = 0.8
-        
+
         self.fractal = FractalProgram(Definitions['kfs-test'])
         self.skeleton_bones = SkeletonBonesProgram()
         self.skeleton_input = SkeletonInput()
@@ -52,7 +52,7 @@ class MainCanvas(app.Canvas):
                 print inputs
                 self.fractal.adjust(inputs)
 
-        self.skeleton_bones.draw(user_tracker_frame)
+        # self.skeleton_bones.draw(user_tracker_frame)
 
     def apply_zoom(self):
         width, height = self.physical_size
