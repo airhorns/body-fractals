@@ -2,7 +2,7 @@ from vispy import app, gloo, set_log_level
 import time
 from fractal import FractalProgram
 from skeleton_bones import SkeletonBonesProgram
-from skeleton_input import SkeletonInput
+from input import SkeletonInput, FakeInput
 from definitions import Definitions
 from primesense import openni2, nite2, _nite2
 
@@ -10,52 +10,45 @@ from primesense import openni2, nite2, _nite2
 class MainCanvas(app.Canvas):
 
     def __init__(self, *args, **kwargs):
+        self.fake_inputs = kwargs.pop('fake_inputs', False)
+        self.draw_bones = kwargs.pop('draw_bones', False)
         super(MainCanvas, self).__init__(*args, **kwargs)
-        gloo.set_viewport(0, 0, width, height)
         gloo.set_state(clear_color='black', blend=True, blend_func=('src_alpha', 'one_minus_src_alpha'))
 
         openni2.initialize()
         nite2.initialize()
         self.user_tracker = nite2.UserTracker(False)
-        self.user_tracker.skeleton_smoothing_factor = 0.8
+        self.user_tracker.skeleton_smoothing_factor = 0.9
 
         self.fractal = FractalProgram(Definitions['kfs-test'])
         self.skeleton_bones = SkeletonBonesProgram()
-        self.skeleton_input = SkeletonInput()
+        if self.fake_inputs:
+            self.input_manager = FakeInput()
+        else:
+            self.input_manager = SkeletonInput()
 
         self._starttime = time.time()
-        self._count = 0
 
         self.apply_zoom()
         self._timer = app.Timer('auto', connect=self.update, start=True)
         self.show()
 
     def on_draw(self, event):
-        self._count += 1
-        self.fractal['time'] = time.time() - self._starttime
+        elapsed =  time.time() - self._starttime
+        self.fractal['time'] = elapsed
         self.fractal.draw()
 
         user_tracker_frame = self.user_tracker.read_frame()
+        inputs = self.input_manager.inputs(elapsed, self.user_tracker, user_tracker_frame)
+        self.fractal.adjust(inputs)
 
-        for user in user_tracker_frame.users:
-            if user.is_new():
-                self.user_tracker.start_skeleton_tracking(user.id)
-
-            if user.is_lost():
-                self.user_tracker.stop_skeleton_tracking(user.id)
-
-            if self._count % 30 == 0:
-                print "%s: new: %s, visible: %s, lost: %s, skeleton state: %s" % (user.id, user.is_new(), user.is_visible(), user.is_lost(), user.skeleton.state)
-
-            if user.skeleton.state == _nite2.NiteSkeletonState.NITE_SKELETON_TRACKED:
-                inputs = self.skeleton_input.inputs(user)
-                print inputs
-                self.fractal.adjust(inputs)
-
-        # self.skeleton_bones.draw(user_tracker_frame)
+        if self.draw_bones:
+            self.skeleton_bones.draw(user_tracker_frame)
 
     def apply_zoom(self):
         width, height = self.physical_size
+        gloo.set_viewport(0, 0, width, height)
+
         self.fractal['resolution'] = [width, height]
         self.skeleton_bones['resolution'] = [width, height]
 
@@ -77,10 +70,16 @@ class MainCanvas(app.Canvas):
 
 
 if __name__ == '__main__':
-    width = 400
-    height = 400
+    from optparse import OptionParser
+    parser = OptionParser()
+    parser.add_option("-W", "--width", type="int", default=800)
+    parser.add_option("-H", "--height", type="int", default=600)
+    parser.add_option("-f", "--fake", action="store_true")
+    parser.add_option("-b", "--bones", action="store_true")
+
+    (options, args) = parser.parse_args()
     set_log_level('INFO')
     gloo.gl.use_gl('gl2 debug')
 
-    canvas = MainCanvas(size=(width, height), keys='interactive', always_on_top=True)
+    canvas = MainCanvas(size=(options.width, options.height), keys='interactive', always_on_top=True, fake_inputs=options.fake, draw_bones=options.bones)
     app.run()

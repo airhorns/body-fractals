@@ -19,7 +19,6 @@ class FractalProgram(gloo.Program):
         self['cameraPos'] = (0.0, 3.0, -6.0)
         self['cameraLookat'] = (0.0, 0.0, 0.0)
         self['lightDir'] = normalize(np.array((1, 1, -1.5)))  # needs to be normalized
-        self['lightColour'] = (0.5, 0.5, 1)
         self['diffuse'] = (1, 1, 1)
         self['ambientFactor'] = 0.45
         self['resolution'] = [10, 10]
