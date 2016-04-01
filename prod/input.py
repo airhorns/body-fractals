@@ -4,6 +4,7 @@ from utils import joint_to_array
 
 JT = _nite2.NiteJointType
 
+
 class Input(object):
 
     def __init__(self):
@@ -12,15 +13,45 @@ class Input(object):
 
 class FakeInput(Input):
 
-    def inputs(self, elapsed, user_tracker, user_tracker_frame):
-        self.count += 1
-        return {
+    def __init__(self):
+        super(FakeInput, self).__init__()
+        self._inputs = {
             'angleA': 0.5 + np.sin(self.count / 180.0),
             'angleB': 0.5 + np.sin(self.count / 120.0),
-            'iterationScale': 0,
-            'iterationOffset': 0,
+            'iterationScale': 0.5,
+            'iterationOffset': 0.5,
             'trapWidth': 0
         }
+
+    def on_key_press(self, event):
+        params = [('iterationScale', 0.1), ('iterationOffset', 0.1), ('trapWidth', 1.1), ('angleA', 0.01), ('angleB', 0.01)]
+        top_keys = ('a', 's', 'd', 'f', 'g', 'h', 'j')
+        bottom_keys = ('z', 'x', 'c', 'v', 'b', 'n', 'm')
+
+        if event.text in top_keys:
+            param, adjustment = params[top_keys.index(event.text)]
+        elif event.text in bottom_keys:
+            param, adjustment = params[bottom_keys.index(event.text)]
+            adjustment *= -1
+        else:
+            return
+
+        value = self._inputs[param] + adjustment
+        if value > 1 or value < 0:
+            print "Not setting %s, max range" % (param)
+        else:
+            print "Setting %s to %s" % (param, value)
+            self._inputs[param] = value
+
+    def inputs(self, elapsed, user_tracker, user_tracker_frame):
+        self.count += 1
+        return self._inputs
+
+
+class FakeUserTracker(object):
+
+    def read_frame(self):
+        return None
 
 
 class SkeletonInput(Input):

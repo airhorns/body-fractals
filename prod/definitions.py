@@ -9,6 +9,7 @@ Definitions = {}
 for name, input_definition in _definitions.iteritems():
     definition = {
         'name': name,
+        'distance_estimator': input_definition['distance_estimator'],
         'params': {}
     }
 

@@ -2,7 +2,7 @@ from vispy import app, gloo, set_log_level
 import time
 from fractal import FractalProgram
 from skeleton_bones import SkeletonBonesProgram
-from input import SkeletonInput, FakeInput
+from input import SkeletonInput, FakeInput, FakeUserTracker
 from definitions import Definitions
 from primesense import openni2, nite2, _nite2
 
@@ -15,16 +15,17 @@ class MainCanvas(app.Canvas):
         super(MainCanvas, self).__init__(*args, **kwargs)
         gloo.set_state(clear_color='black', blend=True, blend_func=('src_alpha', 'one_minus_src_alpha'))
 
-        openni2.initialize()
-        nite2.initialize()
-        self.user_tracker = nite2.UserTracker(False)
-        self.user_tracker.skeleton_smoothing_factor = 0.9
-
-        self.fractal = FractalProgram(Definitions['kfs-test'])
+        self.fractal = FractalProgram(Definitions['octo-kfs'])
         self.skeleton_bones = SkeletonBonesProgram()
         if self.fake_inputs:
+            self.user_tracker = FakeUserTracker()
             self.input_manager = FakeInput()
         else:
+            openni2.initialize()
+            nite2.initialize()
+
+            self.user_tracker = nite2.UserTracker(False)
+            self.user_tracker.skeleton_smoothing_factor = 0.9
             self.input_manager = SkeletonInput()
 
         self._starttime = time.time()
@@ -34,7 +35,7 @@ class MainCanvas(app.Canvas):
         self.show()
 
     def on_draw(self, event):
-        elapsed =  time.time() - self._starttime
+        elapsed = time.time() - self._starttime
         self.fractal['time'] = elapsed
         self.fractal.draw()
 
@@ -42,7 +43,7 @@ class MainCanvas(app.Canvas):
         inputs = self.input_manager.inputs(elapsed, self.user_tracker, user_tracker_frame)
         self.fractal.adjust(inputs)
 
-        if self.draw_bones:
+        if not self.fake_inputs and self.draw_bones:
             self.skeleton_bones.draw(user_tracker_frame)
 
     def apply_zoom(self):
@@ -53,20 +54,8 @@ class MainCanvas(app.Canvas):
         self.skeleton_bones['resolution'] = [width, height]
 
     def on_key_press(self, event):
-        params = [('iterationScale', 0.1), ('iterationOffset', 0.1), ('iterations', 1), ('cubeWidth', 0.1), ('angleA', 0.01), ('angleB', 0.01), ('modelScale', 0.1)]
-        top_keys = ('a', 's', 'd', 'f', 'g', 'h', 'j')
-        bottom_keys = ('z', 'x', 'c', 'v', 'b', 'n', 'm')
-
-        if event.text in top_keys:
-            param, adjustment = params[top_keys.index(event.text)]
-        elif event.text in bottom_keys:
-            param, adjustment = params[bottom_keys.index(event.text)]
-            adjustment *= -1
-        else:
-            return
-
-        print "Setting %s to %s" % (param, self.fractal[param] + adjustment)
-        self.fractal[param] += adjustment
+        if self.fake_inputs:
+            self.input_manager.on_key_press(event)
 
 
 if __name__ == '__main__':

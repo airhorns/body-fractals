@@ -6,6 +6,7 @@ uniform vec3 lightDir;
 uniform vec3 diffuse;
 uniform float ambientFactor;
 uniform bool antialias;
+uniform int distanceEstimatorFunction;
 uniform float modelScale;
 uniform float iterationScale;
 uniform float iterationOffset;
@@ -74,7 +75,6 @@ vec3 colorTrap(vec3 p) {
 float OctoKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   float pointDistance = 1000.0;
   trapDistance = vec3(1000.0, 1000.0, 1000.0);
-  float r;
 
   z = z * modelScale;
   for (int n = 0; n < iterations; n++) {
@@ -101,22 +101,17 @@ float OctoKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
 float TetraKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   float pointDistance = 1000.0;
   trapDistance = vec3(1000.0, 1000.0, 1000.0);
-  float r;
 
   z = z * modelScale;
   for (int n = 0; n < iterations; n++) {
     z.xz = rotate(z.xz, angleA);
-    // This is octahedral symmetry,
-    // with some 'abs' functions thrown in for good measure.
+    // Tetrahedral symmetry from http://www.fractalforums.com/ifs-iterated-function-systems/kaleidoscopic-(escape-time-ifs)/
     if (z.x+z.y<0.0) z.xy = -z.yx;
-    z = abs(z);
     if (z.x+z.z<0.0) z.xz = -z.zx;
-    z = abs(z);
-    if (z.x-z.y<0.0) z.xy = z.yx;
-    z = abs(z);
-    if (z.x-z.z<0.0) z.xz = z.zx;
+    if (z.y+z.z<0.0) z.zy = -z.yz;
+
     z = (z*iterationScale - iterationOffset * (iterationScale-1.0));
-    z.yz = rotate(z.yz, angleB);
+    z.xy = rotate(z.xy, angleB);
 
     float iterationFactor = pow(iterationScale, -float(n+1));
     trapDistance = min(trapDistance, colorTrap(z) * iterationFactor);
@@ -203,9 +198,11 @@ vec3 Mandelbulb(vec3 p) {
 float Dist(vec3 pos, out vec3 trapDistance) {
    pos = RotateY(pos, time*0.025);
 
-  // return OctoKaleidoscopeIFS(pos, trapDistance);
-  return TetraKaleidoscopeIFS(pos, trapDistance);
-  // return Mandelbulb(pos).x;
+  switch(distanceEstimatorFunction) {
+    case 1: return OctoKaleidoscopeIFS(pos, trapDistance);
+    case 2: return TetraKaleidoscopeIFS(pos, trapDistance);
+    // case 3: return Mandelbulb(pos).x;
+  }
 }
 
 // Based on original by IQ - optimized to remove a divide

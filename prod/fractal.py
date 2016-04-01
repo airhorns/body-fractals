@@ -23,6 +23,7 @@ class FractalProgram(gloo.Program):
         self['ambientFactor'] = 0.45
         self['resolution'] = [10, 10]
         self['modelScale'] = 1
+        self['distanceEstimatorFunction'] = self.definition['distance_estimator']
 
         for param, param_description in self.definition['params'].iteritems():
             self[param] = param_description['initial']
