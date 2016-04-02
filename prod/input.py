@@ -11,6 +11,7 @@ class Input(object):
 
     def __init__(self):
         self.count = 0
+        self.tracking_users = False
 
     def on_key_press(self, event):
         pass
@@ -140,6 +141,7 @@ class SkeletonInput(Input):
                 except LowConfidenceException:
                     user_height = 10000000
 
+                self.tracking_users = True
                 self.smoothed_inputs.smooth_update({
                     'angleA': lambda: self.joint_line_angle_relative_to_plane(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_RIGHT_ELBOW], np.array((0, 0, 1))),
                     'angleB': lambda: self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND]),
@@ -153,6 +155,7 @@ class SkeletonInput(Input):
 
                 return self.smoothed_inputs
 
+        self.tracking_users = False
         self.smoothed_inputs.smooth_update({
             'angleA': lambda: 0,
             'angleB': lambda: 0,
@@ -220,12 +223,14 @@ class GroupBodyInputTracker(SkeletonInput):
                 positions.append(user.centerOfMass.z)
 
         if len(positions) > 0:
+            self.tracking_users = True
             self.min = min(self.min, min(positions))
             self.max = max(self.max, max(positions))
             position_range = float(self.max - self.min)
 
             normalized_positions = {i: np.clip(value, 0, 1) for i, value in enumerate(map(lambda p: (p - self.min) / position_range, positions))}
         else:
+            self.tracking_users = False
             normalized_positions = {}
 
         self.smoothed_inputs.smooth_update({

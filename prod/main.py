@@ -25,6 +25,7 @@ class MainCanvas(app.Canvas):
         self.mask = MaskProgram()
 
         self.inputs = None
+        self.input_manager = None
 
         self._starttime = time.time()
 
@@ -46,13 +47,16 @@ class MainCanvas(app.Canvas):
 
         self.definition_position += 1
 
-        if self.fake_inputs:
-            input_manager_index = len(KIOSK_INPUTS) - 1
-        else:
-            input_manager_index = 0 #random.choice(range(len(KIOSK_INPUTS)))
+        # Only rotate the user tracker if there aren't users actively interacting
+        print "ROTATEROTATE: %s" % (self.input_manager)
+        if (not self.input_manager) or not self.input_manager.tracking_users:
+            if self.fake_inputs:
+                input_manager_index = len(KIOSK_INPUTS) - 1
+            else:
+                input_manager_index = 0 #random.choice(range(len(KIOSK_INPUTS)))
 
-        self.input_manager = KIOSK_INPUTS[input_manager_index]()
-        self.mask['tipColorSelector'] = input_manager_index / float(len(KIOSK_INPUTS))
+            self.input_manager = KIOSK_INPUTS[input_manager_index]()
+            self.mask['tipColorSelector'] = input_manager_index / float(len(KIOSK_INPUTS))
 
     def on_draw(self, event):
         elapsed = time.time() - self._starttime
@@ -89,12 +93,14 @@ if __name__ == '__main__':
     parser.add_option("-H", "--height", type="int", default=600)
     parser.add_option("-k", "--kiosk", type="int", default=0)
     parser.add_option("-d", "--start", type="int", default=0)
+    parser.add_option("-s", "--fullscreen", default=False)
     parser.add_option("-f", "--fake", action="store_true")
     parser.add_option("-b", "--bones", action="store_true")
 
     (options, args) = parser.parse_args()
     set_log_level('INFO')
     gloo.gl.use_gl('gl2 debug')
+    fullscreen = int(options.fullscreen) if options.fullscreen else False
 
     canvas = MainCanvas(size=(options.width, options.height),
                         keys='interactive',
@@ -102,6 +108,7 @@ if __name__ == '__main__':
                         resizable=True,
                         fake_inputs=options.fake,
                         draw_bones=options.bones,
+                        fullscreen=fullscreen,
                         kiosk_interval=options.kiosk,
                         start_definition=options.start)
     app.run()
