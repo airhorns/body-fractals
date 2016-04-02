@@ -3,7 +3,7 @@ import time
 from fractal import FractalProgram
 from skeleton_bones import SkeletonBonesProgram
 from mask import MaskProgram
-from input import SkeletonInput, MicrosoftSkeletonInput, FakeInput, FakeUserTracker
+from input import SkeletonInput, MicrosoftSkeletonInput, FakeInput, GroupBodyInputTracker
 from definitions import Definitions
 
 
@@ -24,7 +24,7 @@ class MainCanvas(app.Canvas):
         if self.fake_inputs:
             self.input_manager = FakeInput(sweep=True)
         else:
-            self.input_manager = SkeletonInput()
+            self.input_manager = GroupBodyInputTracker()
 
         self._starttime = time.time()
 

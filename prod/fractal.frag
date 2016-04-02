@@ -67,10 +67,10 @@ float trap(vec3 p){
   switch (trapFunction) {
     case 1: return length(p); // <- no trap
     case 2: return length(p.x-(trapWidth)); // <- cube forms
+    case 3: return length(p.xz-vec2(trapWidth, trapWidth))-0.05; // <- tube forms
   }
   // return  length(p.x-1.0); // unit cube
   // return  length(p.x-0.5-0.5*sin(time/10.0)); // <- cube forms
-  // return length(p.xz-vec2(1.0,1.0))-0.05; // <- tube forms
 }
 
 vec3 colorTrap(vec3 previousTrap, float iterationFactor, vec3 p) {

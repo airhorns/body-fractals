@@ -13,12 +13,18 @@ class Input(object):
     def on_key_press(self, event):
         pass
 
+    def inputs(self, elapsed):
+        self.count += 1
+        if self.count % 60 == 0:
+            print self.smoothed_inputs
+
+
 class FakeInput(Input):
 
     def __init__(self, sweep=False):
         super(FakeInput, self).__init__()
         self.sweep = sweep
-        self._inputs = {
+        self.smoothed_inputs = {
             'angleA': 0,
             'angleB': 0,
             'angleC': 0,
@@ -42,17 +48,18 @@ class FakeInput(Input):
         else:
             return
 
-        value = self._inputs[param] + adjustment
+        value = self.smoothed_inputs[param] + adjustment
         if value > 1 or value < 0:
             print "Not setting %s, max range" % (param)
         else:
             print "Setting %s to %s" % (param, value)
-            self._inputs[param] = value
+            self.smoothed_inputs[param] = value
 
     def inputs(self, elapsed):
-        self.count += 1
+        super(FakeInput, self).inputs(elapsed)
+
         if self.sweep:
-            self._inputs.update({
+            self.smoothed_inputs.update({
                 'angleA': 0.5 + np.sin(self.count / 3000.0) / 2,
                 'angleB': 0.5 + np.sin(self.count / 4000.0) / 2,
                 'angleC': 0.5 + np.sin(self.count / 5000.0) / 2,
@@ -60,13 +67,7 @@ class FakeInput(Input):
                 'iterationOffsetY': 0.5 + np.sin(self.count / 7000.0) / 2,
             })
 
-        return self._inputs
-
-
-class FakeUserTracker(object):
-
-    def read_frame(self):
-        return None
+        return self.smoothed_inputs
 
 
 # MAX_DIFFERENCE = 0.05
@@ -113,9 +114,7 @@ class SkeletonInput(Input):
         self.user_tracker.skeleton_smoothing_factor = 0.8
 
     def inputs(self, elapsed):
-        self.count += 1
-        if self.count % 60 == 0:
-            print self.smoothed_inputs
+        super(SkeletonInput, self).inputs(elapsed)
 
         frame = self.user_tracker.read_frame()
         for user in frame.users:
@@ -192,6 +191,49 @@ class SkeletonInput(Input):
     def on_key_press(self, event):
         if event.text == ' ':
             self.reset_user_tracker()
+
+
+class GroupBodyInputTracker(SkeletonInput):
+
+    def __init__(self, *args, **kwargs):
+        super(GroupBodyInputTracker, self).__init__(*args, **kwargs)
+        self.min = 700
+        self.max = 1500
+
+    def inputs(self, elapsed):
+        Input.inputs(self, elapsed)
+
+        frame = self.user_tracker.read_frame()
+        positions = []
+
+        for user in frame.users:
+            if self.count % 30 == 0:
+                print "%s: new: %s, visible: %s, lost: %s" % (user.id, user.is_new(), user.is_visible(), user.is_lost())
+
+            if user.is_visible():
+                positions.append(user.centerOfMass.z)
+
+        if len(positions) > 0:
+            self.min = min(self.min, min(positions))
+            self.max = max(self.max, max(positions))
+            position_range = float(self.max - self.min)
+
+            normalized_positions = {i: np.clip(value, 0, 1) for i, value in enumerate(map(lambda p: (p - self.min) / position_range, positions))}
+        else:
+            normalized_positions = {}
+
+        self.smoothed_inputs.smooth_update({
+            'angleA': lambda: normalized_positions.get(1, 0),
+            'angleB': lambda: normalized_positions.get(0, 0),
+            'angleC': lambda: normalized_positions.get(3, 0.5 + np.sin(self.count / 400.0) / 2),
+            'iterationScale': lambda: normalized_positions.get(2, 0),
+            'iterationOffsetX': lambda: normalized_positions.get(1, 0.5 + np.sin(self.count / 600.0) / 2),
+            'iterationOffsetY': lambda: normalized_positions.get(1, 0.5 + np.sin(self.count / 600.0) / 2),
+            'iterationOffsetZ': lambda: normalized_positions.get(1, 0.5 + np.sin(self.count / 600.0) / 2),
+            'trapWidth': lambda: 0.5 + np.sin(self.count / 600.0) / 2,
+        })
+
+        return self.smoothed_inputs
 
 
 class MicrosoftSkeletonInput(SkeletonInput):

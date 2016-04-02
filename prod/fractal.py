@@ -33,7 +33,7 @@ class FractalProgram(gloo.Program):
     def adjust(self, adjustments):
         for key, value in adjustments.iteritems():
             param = self.definition['params'][key]['min'] + self.definition['params'][key]['delta'] * value
-            # print "Setting %s to %s, adjustment: %s, min: %s delta: %s" % (key, param, value, self.definition['params'][key]['min'], self.definition['params'][key]['delta'])
+            print "Setting %s to %s, adjustment: %s, min: %s delta: %s" % (key, param, value, self.definition['params'][key]['min'], self.definition['params'][key]['delta'])
             self[key] = param
 
     def _initial_definition_value(value):

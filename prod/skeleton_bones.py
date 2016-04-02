@@ -12,8 +12,7 @@ class SkeletonBonesProgram(gloo.Program):
 
     def draw(self, user_tracker_frame):
         for user in user_tracker_frame.users:
-            if user.skeleton.state == _nite2.NiteSkeletonState.NITE_SKELETON_TRACKED:
-                joint_positions = np.asarray(list((joint.position.x / 1000.0, joint.position.y / 1000.0, 0) for joint in user.skeleton.joints), dtype=np.float32)
-                self['a_position'] = gloo.VertexBuffer(joint_positions)
+            joint_positions = np.asarray(list((joint.position.x / 1000.0, joint.position.y / 1000.0, 0) for joint in user.skeleton.joints), dtype=np.float32)
+            self['a_position'] = gloo.VertexBuffer(joint_positions)
 
         super(SkeletonBonesProgram, self).draw('points')

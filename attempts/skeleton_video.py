@@ -53,6 +53,7 @@ class Canvas(app.Canvas):
                 self.user_tracker.stop_skeleton_tracking(user.id)
                 print "%s: new: %s, visible: %s, lost: %s, skeleton state: %s" % (user.id, user.is_new(), user.is_visible(), user.is_lost(), user.skeleton.state)
 
+            print "x: %s, y: %s, z: %s" % (user.centerOfMass.x, user.centerOfMass.z, user.centerOfMass.y)
             if user.skeleton.state == _nite2.NiteSkeletonState.NITE_SKELETON_TRACKED:
                 joint_positions = np.asarray(list((joint.position.x / 1000.0, joint.position.y / 1000.0, 0) for joint in user.skeleton.joints), dtype=np.float32)
                 self.skeleton_program['a_position'] = gloo.VertexBuffer(joint_positions)
