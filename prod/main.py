@@ -13,13 +13,15 @@ class MainCanvas(app.Canvas):
     def __init__(self, *args, **kwargs):
         self.fake_inputs = kwargs.pop('fake_inputs', False)
         self.draw_bones = kwargs.pop('draw_bones', False)
+        self.kiosk_interval = kwargs.pop('kiosk_interval', 0)
+        self.start_definition = kwargs.pop('start_definition', 0)
         super(MainCanvas, self).__init__(*args, **kwargs)
         gloo.set_state(clear_color='black', blend=True, blend_func=('src_alpha', 'one_minus_src_alpha'))
 
-        self.fractal = FractalProgram(Definitions['tetra-kfs'])
         self.skeleton_bones = SkeletonBonesProgram()
         self.mask = MaskProgram()
 
+        self.inputs = None
         if self.fake_inputs:
             self.user_tracker = FakeUserTracker()
             self.input_manager = FakeInput()
@@ -33,9 +35,22 @@ class MainCanvas(app.Canvas):
 
         self._starttime = time.time()
 
-        self.apply_zoom()
+        self.definition_position = self.start_definition
+        self.rotate()
+        if self.kiosk_interval > 0:
+            self.kiosk_timer = app.Timer(self.kiosk, connect=self.rotate, start=True)
+
         self._timer = app.Timer('auto', connect=self.update, start=True)
         self.show()
+
+    def rotate(self, event=None):
+        definition = Definitions[Definitions.keys()[self.definition_position % len(Definitions.keys())]]
+        self.fractal = FractalProgram(definition)
+        if self.inputs:
+            self.fractal.adjust(self.inputs)
+        self.apply_zoom()
+
+        self.definition_position += 1
 
     def on_draw(self, event):
         elapsed = time.time() - self._starttime
@@ -43,8 +58,8 @@ class MainCanvas(app.Canvas):
         self.fractal.draw()
 
         user_tracker_frame = self.user_tracker.read_frame()
-        inputs = self.input_manager.inputs(elapsed, self.user_tracker, user_tracker_frame)
-        self.fractal.adjust(inputs)
+        self.inputs = self.input_manager.inputs(elapsed, self.user_tracker, user_tracker_frame)
+        self.fractal.adjust(self.inputs)
 
         if not self.fake_inputs and self.draw_bones:
             self.skeleton_bones.draw(user_tracker_frame)
@@ -72,6 +87,8 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-W", "--width", type="int", default=800)
     parser.add_option("-H", "--height", type="int", default=600)
+    parser.add_option("-k", "--kiosk", type="int", default=0)
+    parser.add_option("-d", "--start", type="int", default=0)
     parser.add_option("-f", "--fake", action="store_true")
     parser.add_option("-b", "--bones", action="store_true")
 
@@ -84,5 +101,7 @@ if __name__ == '__main__':
                         always_on_top=True,
                         resizable=True,
                         fake_inputs=options.fake,
-                        draw_bones=options.bones)
+                        draw_bones=options.bones,
+                        kiosk_interval=options.kiosk,
+                        start_definition=options.start)
     app.run()
