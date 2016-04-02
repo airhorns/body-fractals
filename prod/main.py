@@ -3,9 +3,8 @@ import time
 from fractal import FractalProgram
 from skeleton_bones import SkeletonBonesProgram
 from mask import MaskProgram
-from input import SkeletonInput, FakeInput, FakeUserTracker
+from input import SkeletonInput, MicrosoftSkeletonInput, FakeInput, FakeUserTracker
 from definitions import Definitions
-from primesense import openni2, nite2, _nite2
 
 
 class MainCanvas(app.Canvas):
@@ -23,14 +22,8 @@ class MainCanvas(app.Canvas):
 
         self.inputs = None
         if self.fake_inputs:
-            self.user_tracker = FakeUserTracker()
             self.input_manager = FakeInput()
         else:
-            openni2.initialize()
-            nite2.initialize()
-
-            self.user_tracker = nite2.UserTracker(False)
-            self.user_tracker.skeleton_smoothing_factor = 0.9
             self.input_manager = SkeletonInput()
 
         self._starttime = time.time()
@@ -57,12 +50,11 @@ class MainCanvas(app.Canvas):
         self.fractal['time'] = elapsed
         self.fractal.draw()
 
-        user_tracker_frame = self.user_tracker.read_frame()
-        self.inputs = self.input_manager.inputs(elapsed, self.user_tracker, user_tracker_frame)
+        self.inputs = self.input_manager.inputs(elapsed)
         self.fractal.adjust(self.inputs)
 
-        if not self.fake_inputs and self.draw_bones:
-            self.skeleton_bones.draw(user_tracker_frame)
+        if not self.fake_inputs and self.draw_bones and hasattr(self.input_manager, 'user_tracker'):
+            self.skeleton_bones.draw(self.input_manager.user_tracker.read_frame())
 
         self.mask.draw()
 
@@ -78,8 +70,7 @@ class MainCanvas(app.Canvas):
         self.mask['resolution'] = [width, height]
 
     def on_key_press(self, event):
-        if self.fake_inputs:
-            self.input_manager.on_key_press(event)
+        self.input_manager.on_key_press(event)
 
 
 if __name__ == '__main__':
