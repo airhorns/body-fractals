@@ -4,6 +4,8 @@ from utils import joint_to_array, LowConfidenceException
 
 JT = _nite2.NiteJointType
 
+user_tracker = None
+
 
 class Input(object):
 
@@ -21,7 +23,7 @@ class Input(object):
 
 class FakeInput(Input):
 
-    def __init__(self, sweep=False):
+    def __init__(self, sweep=True):
         super(FakeInput, self).__init__()
         self.sweep = sweep
         self.smoothed_inputs = {
@@ -103,26 +105,29 @@ class SkeletonInput(Input):
 
     def __init__(self):
         super(SkeletonInput, self).__init__()
-        openni2.initialize()
-        nite2.initialize()
+        if user_tracker is None:
+            openni2.initialize()
+            nite2.initialize()
 
         self.smoothed_inputs = SmoothInputs()
         self.reset_user_tracker()
 
     def reset_user_tracker(self):
-        self.user_tracker = nite2.UserTracker(False)
-        self.user_tracker.skeleton_smoothing_factor = 0.8
+        global user_tracker
+        user_tracker = nite2.UserTracker(False)
+        user_tracker.skeleton_smoothing_factor = 0.8
 
     def inputs(self, elapsed):
         super(SkeletonInput, self).inputs(elapsed)
 
-        frame = self.user_tracker.read_frame()
+        global user_tracker
+        frame = user_tracker.read_frame()
         for user in frame.users:
             if user.is_new():
-                self.user_tracker.start_skeleton_tracking(user.id)
+                user_tracker.start_skeleton_tracking(user.id)
 
             if user.is_lost():
-                self.user_tracker.stop_skeleton_tracking(user.id)
+                user_tracker.stop_skeleton_tracking(user.id)
 
             if self.count % 30 == 0:
                 print "%s: new: %s, visible: %s, lost: %s, skeleton state: %s" % (user.id, user.is_new(), user.is_visible(), user.is_lost(), user.skeleton.state)
@@ -203,7 +208,8 @@ class GroupBodyInputTracker(SkeletonInput):
     def inputs(self, elapsed):
         Input.inputs(self, elapsed)
 
-        frame = self.user_tracker.read_frame()
+        global user_tracker
+        frame = user_tracker.read_frame()
         positions = []
 
         for user in frame.users:

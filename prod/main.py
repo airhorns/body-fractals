@@ -1,10 +1,14 @@
 from vispy import app, gloo, set_log_level
 import time
+import random
 from fractal import FractalProgram
 from skeleton_bones import SkeletonBonesProgram
 from mask import MaskProgram
 from input import SkeletonInput, MicrosoftSkeletonInput, FakeInput, GroupBodyInputTracker
 from definitions import Definitions
+
+
+KIOSK_INPUTS = [SkeletonInput, GroupBodyInputTracker, FakeInput]
 
 
 class MainCanvas(app.Canvas):
@@ -21,10 +25,6 @@ class MainCanvas(app.Canvas):
         self.mask = MaskProgram()
 
         self.inputs = None
-        if self.fake_inputs:
-            self.input_manager = FakeInput(sweep=True)
-        else:
-            self.input_manager = GroupBodyInputTracker()
 
         self._starttime = time.time()
 
@@ -45,6 +45,14 @@ class MainCanvas(app.Canvas):
         self.apply_zoom()
 
         self.definition_position += 1
+
+        if self.fake_inputs:
+            input_manager_index = len(KIOSK_INPUTS) - 1
+        else:
+            input_manager_index = random.choice(range(len(KIOSK_INPUTS)))
+
+        self.input_manager = KIOSK_INPUTS[input_manager_index]()
+        self.mask['tipColorSelector'] = input_manager_index / float(len(KIOSK_INPUTS))
 
     def on_draw(self, event):
         elapsed = time.time() - self._starttime
