@@ -65,3 +65,35 @@ tetra-kfs:
     trapWidth:
       min: 0
       max: 2
+
+mandelbulb:
+  distance_estimator: 3
+  trap_functions: [1]
+  params:
+    iterations: 20
+    angleA:
+      min: 1
+      max: 3
+    angleB:
+      min: 0.5
+      max: 1
+    angleC:
+      min: 0.5
+      max: 1
+    iterationScale:
+      min: 2.5
+      max: 5
+    iterationOffsetX:
+      min: 1
+      max: 1.8
+    iterationOffsetY:
+      min: 1
+      max: 1.8
+      inital: 2
+    iterationOffsetZ:
+      min: 1
+      max: 1.8
+      inital: 2
+    trapWidth:
+      min: 0
+      max: 2

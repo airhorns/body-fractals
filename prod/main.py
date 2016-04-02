@@ -49,7 +49,7 @@ class MainCanvas(app.Canvas):
         if self.fake_inputs:
             input_manager_index = len(KIOSK_INPUTS) - 1
         else:
-            input_manager_index = random.choice(range(len(KIOSK_INPUTS)))
+            input_manager_index = 0 #random.choice(range(len(KIOSK_INPUTS)))
 
         self.input_manager = KIOSK_INPUTS[input_manager_index]()
         self.mask['tipColorSelector'] = input_manager_index / float(len(KIOSK_INPUTS))

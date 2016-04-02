@@ -23,7 +23,7 @@ class Input(object):
 
 class FakeInput(Input):
 
-    def __init__(self, sweep=True):
+    def __init__(self, sweep=False):
         super(FakeInput, self).__init__()
         self.sweep = sweep
         self.smoothed_inputs = {

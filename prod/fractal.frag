@@ -132,76 +132,40 @@ float TetraKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   return pointDistance;
 }
 
-//--------------------------------------------------------------------------------
-// quaternion manipulation
-//--------------------------------------------------------------------------------
-
-vec4 qSquare( vec4 a ) {
-    return vec4( a.x*a.x - dot(a.yzw,a.yzw), 2.0*a.x*(a.yzw) );
+// angleA == fixedRadius2, angleB == minRadius2
+void sphereFold(inout vec3 z, inout float dz) {
+	float r2 = dot(z,z);
+	if (r2 < angleB) {
+		// linear inner scaling
+		float temp = (angleA/angleB);
+		z *= temp;
+		dz*= temp;
+	} else if (r2 < angleA) {
+		// this is the actual sphere inversion
+		float temp = (angleA / r2);
+		z *= temp;
+		dz*= temp;
+	}
 }
 
-vec4 qCube( vec4 a ) {
-  return a * ( 4.0*a.x*a.x - dot(a,a)*vec4(3.0,1.0,1.0,1.0) );
+void boxFold(inout vec3 z, inout float dz) {
+	z = clamp(z, -angleC, angleC) * 2.0 - z;
 }
 
-float lengthSquared( vec4 z ) { return dot(z,z); }
-vec4 c = vec4(-0.1,0.6,0.9,-0.3) + 0.1*sin( vec4(3.0,0.0,1.0,2.0) + 0.5*vec4(1.0,1.3,1.7,2.1)*time);
+float Mandelbox(vec3 z, out vec3 trapDistance) {
+  vec3 iterationOffset = vec3(iterationOffsetX, iterationOffsetY, iterationOffsetZ);
+	float dr = 1.0;
 
-vec3 Julia( vec3 p ) {
-  vec4 z = vec4( p, 0.2 );
-
-  float m2 = 0.0;
-  vec2 t = vec2( 1e10 );
-
-  float dz2 = 1.0;
-  for( int i=0; i<10; i++ ) {
-    // |dz|^2 = |3z^2|^2
-    dz2 *= 9.0 * lengthSquared(qSquare(z));
-    // z = z^3 + c
-    z = qCube( z ) + c;
-
-    // stop under divergence
-    m2 = dot(z, z);
-    if( m2>10000.0 ) break;
-
-    // orbit trapping ( |z|^2 and z_x  )
-    t = min( t, vec2( m2, abs(z.x)) );
-
-  }
-
-  // distance estimator: d(z) = 0.5 * log|z| * |z|/|dz|   (see http://iquilezles.org/www/articles/distancefractals/distancefractals.htm)
-  float d = 0.25 * log(m2) * sqrt(m2 / dz2);
-
-  return vec3( d, t );
-}
-
-vec3 Mandelbulb(vec3 p) {
-  p.xyz = p.xzy;
-  vec3 z = p;
-  vec3 dz=vec3(0.0);
-  float power = 8.0;
-  float r, theta, phi;
-  float dr = 1.0;
-
-  float t0 = 1.0;
-
-  for(int i = 0; i < 7; ++i) {
-    r = length(z);
-    if(r > 2.0) continue;
-    theta = atan(z.y / z.x);
-    phi = asin(z.z / r);
-
-    dr = pow(r, power - 1.0) * dr * power + 1.0;
-
-    r = pow(r, power);
-    theta = theta * power;
-    phi = phi * power;
-
-    z = r * vec3(cos(theta)*cos(phi), sin(theta)*cos(phi), sin(phi)) + p;
-
-    t0 = min(t0, r);
-  }
-  return vec3(0.5 * log(r) * r / dr, t0, 0.0);
+	for (int n = 0; n < iterations; n++) {
+		boxFold(z, dr);       // Reflect
+		sphereFold(z, dr);    // Sphere Inversion
+    z = iterationScale*z + iterationOffset;  // Scale & Translate
+    dr = dr * abs(iterationScale) + 1.0;
+    float iterationFactor = pow(iterationScale, -float(n+1));
+    trapDistance = colorTrap(trapDistance, iterationFactor, z);
+	}
+	float r = length(z);
+	return r/abs(dr);
 }
 
 // This should return continuous positive values when outside and negative values inside,
@@ -212,7 +176,7 @@ float Dist(vec3 pos, out vec3 trapDistance) {
   switch(distanceEstimatorFunction) {
     case 1: return OctoKaleidoscopeIFS(pos, trapDistance);
     case 2: return TetraKaleidoscopeIFS(pos, trapDistance);
-    // case 3: return Mandelbulb(pos).x;
+    case 3: return Mandelbox(pos, trapDistance);
   }
 }
 
