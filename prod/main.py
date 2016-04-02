@@ -16,7 +16,7 @@ class MainCanvas(app.Canvas):
         super(MainCanvas, self).__init__(*args, **kwargs)
         gloo.set_state(clear_color='black', blend=True, blend_func=('src_alpha', 'one_minus_src_alpha'))
 
-        self.fractal = FractalProgram(Definitions['octo-kfs'])
+        self.fractal = FractalProgram(Definitions['tetra-kfs'])
         self.skeleton_bones = SkeletonBonesProgram()
         self.mask = MaskProgram()
 

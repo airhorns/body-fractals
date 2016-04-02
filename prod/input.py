@@ -82,11 +82,13 @@ class SkeletonInput(Input):
                 user_height = self.joint_distance_in_space(joints[JT.NITE_JOINT_HEAD], joints[JT.NITE_JOINT_LEFT_FOOT])
 
                 return {
-                    'angleA': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HAND]),
+                    'angleA': self.joint_line_angle_relative_to_plane(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_RIGHT_ELBOW], np.array((0, 0, 1))),
                     'angleB': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND]),
+                    'angleC': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HAND]),
                     'iterationScale': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HIP], joints[JT.NITE_JOINT_LEFT_ELBOW]),
                     'iterationOffset': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
-                    'trapWidth': self.normalized_joint_distance_in_space(joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_FOOT], user_height / 2, user_height)
+                    # 'trapWidth': self.normalized_joint_distance_in_space(joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_FOOT], user_height / 2, user_height)
+                    'trapWidth': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND])
                 }
 
         return {
@@ -109,6 +111,11 @@ class SkeletonInput(Input):
 
     def normalized_joint_distance_in_space(self, joint_a, joint_b, expected_lower_bound, expected_upper_bound):
         return np.clip((self.joint_distance_in_space(joint_a, joint_b) - expected_lower_bound) / expected_upper_bound, 0, 1)
+
+    def joint_line_angle_relative_to_plane(self, joint_a, joint_b, plane_normal):
+        # http://www.vitutor.com/geometry/distance/line_plane.html
+        line = joint_to_array(joint_b) - joint_to_array(joint_a)
+        return np.arcsin(np.dot(line, plane_normal) / (np.linalg.norm(line) * np.linalg.norm(plane_normal))) / np.pi
 
     def joint_angle_relative_to_screen(self, joint):
         pass

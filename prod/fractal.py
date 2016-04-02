@@ -1,6 +1,7 @@
 from vispy import gloo
 import numpy as np
 from utils import normalize, read_shader
+import random
 
 
 class FractalProgram(gloo.Program):
@@ -23,6 +24,7 @@ class FractalProgram(gloo.Program):
         self['ambientFactor'] = 0.45
         self['resolution'] = [10, 10]
         self['distanceEstimatorFunction'] = self.definition['distance_estimator']
+        self['trapFunction'] = random.choice(self.definition['trap_functions'])
 
         for param, param_description in self.definition['params'].iteritems():
             self[param] = param_description['initial']

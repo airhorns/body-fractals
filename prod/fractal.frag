@@ -10,9 +10,11 @@ uniform int distanceEstimatorFunction;
 uniform float iterationScale;
 uniform float iterationOffset;
 uniform float iterations;
+uniform int trapFunction;
 uniform float trapWidth;
 uniform float angleA;
 uniform float angleB;
+uniform float angleC;
 
 #define PI 3.14159265
 #define GAMMA 0.8
@@ -59,11 +61,13 @@ vec2 rotate(vec2 v, float a) {
 }
 
 float trap(vec3 p){
+  switch (trapFunction) {
+    case 1: return length(p); // <- no trap
+    case 2: return length(p.x-(trapWidth)); // <- cube forms
+  }
   // return  length(p.x-1.0); // unit cube
-  return length(p.x-(trapWidth)); // <- cube forms
   // return  length(p.x-0.5-0.5*sin(time/10.0)); // <- cube forms
   // return length(p.xz-vec2(1.0,1.0))-0.05; // <- tube forms
-  // return length(p); // <- no trap
 }
 
 vec3 colorTrap(vec3 p) {
@@ -283,7 +287,7 @@ vec4 March(vec3 ro, vec3 rd, out vec3 trapDistance) {
    return vec4(0.0);
 }
 
- // https://www.shadertoy.com/view/ltfSWn
+ // https://www.shadertoy.com/view/lt fSWn
 
 void main() {
   const int ANTIALIAS_SAMPLES = 4;

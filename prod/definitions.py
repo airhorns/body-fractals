@@ -10,6 +10,7 @@ for name, input_definition in _definitions.iteritems():
     definition = {
         'name': name,
         'distance_estimator': input_definition['distance_estimator'],
+        'trap_functions': input_definition['trap_functions'],
         'params': {}
     }
 
