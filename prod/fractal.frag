@@ -8,7 +8,9 @@ uniform float ambientFactor;
 uniform bool antialias;
 uniform int distanceEstimatorFunction;
 uniform float iterationScale;
-uniform float iterationOffset;
+uniform float iterationOffsetX;
+uniform float iterationOffsetY;
+uniform float iterationOffsetZ;
 uniform float iterations;
 uniform int trapFunction;
 uniform float trapWidth;
@@ -78,6 +80,7 @@ vec3 colorTrap(vec3 p) {
 float OctoKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   float pointDistance = 1000.0;
   trapDistance = vec3(1000.0, 1000.0, 1000.0);
+  vec3 iterationOffset = vec3(iterationOffsetX, iterationOffsetY, iterationOffsetZ);
 
   for (int n = 0; n < iterations; n++) {
     z.xz = rotate(z.xz, angleA);
@@ -103,6 +106,7 @@ float OctoKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
 float TetraKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   float pointDistance = 1000.0;
   trapDistance = vec3(1000.0, 1000.0, 1000.0);
+  vec3 iterationOffset = vec3(iterationOffsetX, iterationOffsetY, iterationOffsetZ);
 
   for (int n = 0; n < iterations; n++) {
     z.xz = rotate(z.xz, angleA);
@@ -120,7 +124,6 @@ float TetraKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   }
   return pointDistance;
 }
-
 
 //--------------------------------------------------------------------------------
 // quaternion manipulation
