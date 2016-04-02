@@ -284,8 +284,9 @@ void main() {
      if (_res.a == 1.0) {
         res.rgb += clamp(Shading(_res.rgb, rd, GetNormal(_res.rgb), trapDistance).rgb, 0.0, 1.0);
      } else {
-        res.rgb = vec3(0.8, 0.95, 1.0) * (0.7 + 0.3 * rd.y);
-        res.rgb += vec3(0.8, 0.7, 0.5) * pow(clamp(dot(rd, lightDir), 0.0, 1.0), 32.0);
+        res.rgb = vec3(0, 0, 0);
+        // res.rgb = vec3(0.8, 0.95, 1.0) * (0.7 + 0.3 * rd.y);
+        // res.rgb += vec3(0.8, 0.7, 0.5) * pow(clamp(dot(rd, lightDir), 0.0, 1.0), 32.0);
      }
      ang += d_ang;
   }

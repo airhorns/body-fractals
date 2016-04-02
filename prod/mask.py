@@ -15,6 +15,6 @@ class MaskProgram(gloo.Program):
 
         self["foregroundColor"] = fg
         self["backgroundColor"] = bg
-        self["triangleA"] = (0.01, 0.99)
-        self["triangleB"] = (0.99, 0.99)
-        self["triangleC"] = (0.5, 0.01)
+        self["triangleA"] = (0.00, 1.0)
+        self["triangleB"] = (1.0, 1.0)
+        self["triangleC"] = (0.5, 0.00)
