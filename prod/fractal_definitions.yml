@@ -2,7 +2,7 @@ octo-kfs:
   distance_estimator: 1
   trap_functions: [1,2]
   params:
-    iterations: 16
+    iterations: 20
     angleA:
       min: 0
       max: 0.78539816339

@@ -110,7 +110,7 @@ class SkeletonInput(Input):
 
     def reset_user_tracker(self):
         self.user_tracker = nite2.UserTracker(False)
-        self.user_tracker.skeleton_smoothing_factor = 0.95
+        self.user_tracker.skeleton_smoothing_factor = 0.8
 
     def inputs(self, elapsed):
         self.count += 1

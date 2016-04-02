@@ -22,7 +22,7 @@ class MainCanvas(app.Canvas):
 
         self.inputs = None
         if self.fake_inputs:
-            self.input_manager = FakeInput()
+            self.input_manager = FakeInput(sweep=True)
         else:
             self.input_manager = SkeletonInput()
 
@@ -31,7 +31,7 @@ class MainCanvas(app.Canvas):
         self.definition_position = self.start_definition
         self.rotate()
         if self.kiosk_interval > 0:
-            self.kiosk_timer = app.Timer(self.kiosk, connect=self.rotate, start=True)
+            self.kiosk_timer = app.Timer(self.kiosk_interval, connect=self.rotate, start=True)
 
         self._timer = app.Timer('auto', connect=self.update, start=True)
         self.show()
@@ -39,6 +39,7 @@ class MainCanvas(app.Canvas):
     def rotate(self, event=None):
         definition = Definitions[Definitions.keys()[self.definition_position % len(Definitions.keys())]]
         self.fractal = FractalProgram(definition)
+
         if self.inputs:
             self.fractal.adjust(self.inputs)
         self.apply_zoom()

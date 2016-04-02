@@ -25,6 +25,7 @@ class FractalProgram(gloo.Program):
         self['resolution'] = [10, 10]
         self['distanceEstimatorFunction'] = self.definition['distance_estimator']
         self['trapFunction'] = random.choice(self.definition['trap_functions'])
+        self['colorTrapFunction'] = random.choice([1])
 
         for param, param_description in self.definition['params'].iteritems():
             self[param] = param_description['initial']

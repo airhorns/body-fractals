@@ -14,6 +14,7 @@ uniform float iterationOffsetZ;
 uniform float iterations;
 uniform int trapFunction;
 uniform float trapWidth;
+uniform int colorTrapFunction;
 uniform float angleA;
 uniform float angleB;
 uniform float angleC;
@@ -72,8 +73,13 @@ float trap(vec3 p){
   // return length(p.xz-vec2(1.0,1.0))-0.05; // <- tube forms
 }
 
-vec3 colorTrap(vec3 p) {
-  return p;
+vec3 colorTrap(vec3 previousTrap, float iterationFactor, vec3 p) {
+  switch (colorTrapFunction) {
+    case 1: return min(previousTrap, p * iterationFactor); // channel wise distance from the axis
+    case 2: return max(previousTrap, 1/p); // channel wise proximity to the axis
+    case 3: return min(previousTrap, normalize(p));
+    // case 4: return vec3(0.4, 0.2, 0.3);
+  }
 }
 
 // from https://www.shadertoy.com/view/XsX3z7
@@ -98,7 +104,7 @@ float OctoKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
     z.xy = rotate(z.xy, angleC);
 
     float iterationFactor = pow(iterationScale, -float(n+1));
-    trapDistance = min(trapDistance, colorTrap(z) * iterationFactor);
+    trapDistance = colorTrap(trapDistance, iterationFactor, z);
     pointDistance = min(pointDistance, trap(z) * iterationFactor);
   }
   return pointDistance;
@@ -120,7 +126,7 @@ float TetraKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
     z.xy = rotate(z.xy, angleB);
 
     float iterationFactor = pow(iterationScale, -float(n+1));
-    trapDistance = min(trapDistance, colorTrap(z) * iterationFactor);
+    trapDistance = colorTrap(trapDistance, iterationFactor, z);
     pointDistance = min(pointDistance, trap(z) * iterationFactor);
   }
   return pointDistance;
@@ -252,12 +258,14 @@ float SoftShadow(vec3 ro, vec3 rd, float k)
 
 // Based on a shading method by Ben Weston. Added AO and SoftShadows to original.
 vec4 Shading(vec3 pos, vec3 rd, vec3 norm, vec3 trapDistance) {
-  vec3 color = hsv2rgb(vec3(rgb2hsv(normalize(trapDistance)).rg, 0.4));
+  vec3 hsvColor = rgb2hsv(normalize(trapDistance));
+  float hue = mod(hsvColor.r * 1000 + sin(time * 0.025) * 2000, 1000) / 1000;
+  vec3 color = hsv2rgb(vec3(hue, 0.6, 0.5));
   vec3 light = color * max(0.0, dot(norm, lightDir));
 
   light = (diffuse * light);
   light *= SoftShadow(pos, lightDir, 16.0);
-  light += CalcAO(pos, norm) * ambientFactor;
+  light += hsv2rgb(vec3(hue, 0.2, 0.6)) * CalcAO(pos, norm) * ambientFactor;
   return vec4(light, 1.0);
 }
 
