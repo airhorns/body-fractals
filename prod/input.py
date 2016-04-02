@@ -20,12 +20,14 @@ class FakeInput(Input):
             'angleA': 0,
             'angleB': 0,
             'iterationScale': 0.5,
-            'iterationOffset': 0.5,
+            'iterationOffsetX': 0.5,
+            'iterationOffsetY': 0.5,
+            'iterationOffsetZ': 0.5,
             'trapWidth': 0
         }
 
     def on_key_press(self, event):
-        params = [('iterationScale', 0.1), ('iterationOffset', 0.1), ('trapWidth', 1.1), ('angleA', 0.01), ('angleB', 0.01)]
+        params = [('iterationScale', 0.1), ('iterationOffsetX', 0.1), ('iterationOffsetY', 0.1), ('trapWidth', 1.1), ('angleA', 0.01), ('angleB', 0.01)]
         top_keys = ('a', 's', 'd', 'f', 'g', 'h', 'j')
         bottom_keys = ('z', 'x', 'c', 'v', 'b', 'n', 'm')
 
@@ -85,8 +87,11 @@ class SkeletonInput(Input):
                     'angleA': self.joint_line_angle_relative_to_plane(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_RIGHT_ELBOW], np.array((0, 0, 1))),
                     'angleB': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND]),
                     'angleC': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HAND]),
-                    'iterationScale': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HIP], joints[JT.NITE_JOINT_LEFT_ELBOW]),
-                    'iterationOffset': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
+                    'iterationScale': self.joint_distance_relative_to_reference_joint_distance(joints[JT.NITE_JOINT_LEFT_HAND], joints[JT.NITE_JOINT_RIGHT_HAND], joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_SHOULDER], 3),
+                    # 'iterationOffsetX': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HIP], joints[JT.NITE_JOINT_LEFT_ELBOW]),
+                    'iterationOffsetX': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
+                    'iterationOffsetY': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
+                    'iterationOffsetZ': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
                     # 'trapWidth': self.normalized_joint_distance_in_space(joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_FOOT], user_height / 2, user_height)
                     'trapWidth': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND])
                 }
@@ -95,9 +100,17 @@ class SkeletonInput(Input):
             'angleA': 0,
             'angleB': 0,
             'iterationScale': 0,
-            'iterationOffset': 0,
+            'iterationOffsetX': 0,
+            'iterationOffsetY': 0,
+            'iterationOffsetZ': 0,
             'trapWidth': 0
         }
+
+    def joint_distance_relative_to_reference_joint_distance(self, joint_a, joint_b, reference_joint_a, reference_joint_b, max_multiplier):
+        variable_distance = self.joint_distance_in_space(joint_a, joint_b)
+        reference_distance = self.joint_distance_in_space(reference_joint_a, reference_joint_b)
+
+        return np.clip((variable_distance / reference_distance) / max_multiplier, 0, 1)
 
     def joint_angle_relative_to_joint(self, root, appendage_a, appendage_b):
         # inverse of cosine law -- translate the vectors to the root by subtracting out the root, then using an inverted dot product forumla isolating for the angle
