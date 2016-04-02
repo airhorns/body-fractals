@@ -95,6 +95,7 @@ float OctoKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
     if (z.x-z.z<0.0) z.xz = z.zx;
     z = (z*iterationScale - iterationOffset * (iterationScale-1.0));
     z.yz = rotate(z.yz, angleB);
+    z.xy = rotate(z.xy, angleC);
 
     float iterationFactor = pow(iterationScale, -float(n+1));
     trapDistance = min(trapDistance, colorTrap(z) * iterationFactor);

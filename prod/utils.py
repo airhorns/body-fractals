@@ -2,7 +2,13 @@ import numpy as np
 import os.path
 
 
+class LowConfidenceException(Exception):
+    pass
+
+
 def joint_to_array(joint):
+    if joint.positionConfidence < 0.2:
+        raise LowConfidenceException
     return np.asarray((joint.position.x, joint.position.y, joint.position.z))
 
 

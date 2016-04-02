@@ -36,7 +36,7 @@ tetra-kfs:
   distance_estimator: 2
   trap_functions: [1]
   params:
-    iterations: 16
+    iterations: 20
     angleA:
       min: -3.14
       max: 3.14
@@ -63,5 +63,5 @@ tetra-kfs:
       max: 2.0
       inital: 2
     trapWidth:
-      min: 1
+      min: 0
       max: 2

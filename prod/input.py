@@ -1,6 +1,6 @@
 from primesense import _nite2, nite2, openni2
 import numpy as np
-from utils import joint_to_array
+from utils import joint_to_array, LowConfidenceException
 
 JT = _nite2.NiteJointType
 
@@ -21,6 +21,7 @@ class FakeInput(Input):
         self._inputs = {
             'angleA': 0,
             'angleB': 0,
+            'angleC': 0,
             'iterationScale': 0.5,
             'iterationOffsetX': 0.5,
             'iterationOffsetY': 0.5,
@@ -51,9 +52,12 @@ class FakeInput(Input):
     def inputs(self, elapsed):
         self.count += 1
         if self.sweep:
-            self.inputs.update({
-                'angleA': 0.5 + np.sin(self.count / 180.0),
-                'angleB': 0.5 + np.sin(self.count / 120.0),
+            self._inputs.update({
+                'angleA': 0.5 + np.sin(self.count / 3000.0) / 2,
+                'angleB': 0.5 + np.sin(self.count / 4000.0) / 2,
+                'angleC': 0.5 + np.sin(self.count / 5000.0) / 2,
+                'iterationOffsetX': 0.5 + np.sin(self.count / 6000.0) / 2,
+                'iterationOffsetY': 0.5 + np.sin(self.count / 7000.0) / 2,
             })
 
         return self._inputs
@@ -65,6 +69,35 @@ class FakeUserTracker(object):
         return None
 
 
+# MAX_DIFFERENCE = 0.05
+
+class SmoothInputs(dict):
+
+    def __init__(self, *args, **kwargs):
+        super(SmoothInputs, self).__init__(*args, **kwargs)
+        self._previous = {}
+
+    def smooth_update(self, attributes):
+        for key, value in attributes.iteritems():
+            self.smooth_set(key, value)
+
+    def smooth_set(self, key, value_func):
+        previous = self._previous.get(key, 0)
+        try:
+            value = value_func()
+        except LowConfidenceException:
+            value = previous
+            pass
+
+        # difference = value - previous
+        # if abs(difference) > MAX_DIFFERENCE:
+        #     print "key: %s, value: %s, previous: %s, difference: %s" % (key, value, previous, difference)
+        #     value = previous + np.sign(difference) * MAX_DIFFERENCE
+
+        self._previous[key] = self.get(key, 0)
+        self[key] = value
+
+
 class SkeletonInput(Input):
 
     def __init__(self):
@@ -72,14 +105,18 @@ class SkeletonInput(Input):
         openni2.initialize()
         nite2.initialize()
 
+        self.smoothed_inputs = SmoothInputs()
         self.reset_user_tracker()
 
     def reset_user_tracker(self):
         self.user_tracker = nite2.UserTracker(False)
-        self.user_tracker.skeleton_smoothing_factor = 0.9
+        self.user_tracker.skeleton_smoothing_factor = 0.95
 
     def inputs(self, elapsed):
         self.count += 1
+        if self.count % 60 == 0:
+            print self.smoothed_inputs
+
         frame = self.user_tracker.read_frame()
         for user in frame.users:
             if user.is_new():
@@ -94,33 +131,36 @@ class SkeletonInput(Input):
             if user.skeleton.state == _nite2.NiteSkeletonState.NITE_SKELETON_TRACKED and user.is_visible():
                 joints = user.skeleton.joints
 
-                user_height = self.joint_distance_in_space(joints[JT.NITE_JOINT_HEAD], joints[JT.NITE_JOINT_LEFT_FOOT])
-                inputs = {
-                    'angleA': self.joint_line_angle_relative_to_plane(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_RIGHT_ELBOW], np.array((0, 0, 1))),
-                    'angleB': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND]),
-                    'angleC': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HAND]),
-                    'iterationScale': self.joint_distance_relative_to_reference_joint_distance(joints[JT.NITE_JOINT_LEFT_HAND], joints[JT.NITE_JOINT_RIGHT_HAND], joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_SHOULDER], 3),
-                    # 'iterationOffsetX': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HIP], joints[JT.NITE_JOINT_LEFT_ELBOW]),
-                    'iterationOffsetX': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
-                    'iterationOffsetY': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
-                    'iterationOffsetZ': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
-                    # 'trapWidth': self.normalized_joint_distance_in_space(joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_FOOT], user_height / 2, user_height)
-                    'trapWidth': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND])
-                }
+                try:
+                    user_height = self.joint_distance_in_space(joints[JT.NITE_JOINT_HEAD], joints[JT.NITE_JOINT_LEFT_FOOT])
+                except LowConfidenceException:
+                    user_height = 10000000
 
-                if self.count % 60 == 0:
-                    print inputs
-                return inputs
+                self.smoothed_inputs.smooth_update({
+                    'angleA': lambda: self.joint_line_angle_relative_to_plane(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_RIGHT_ELBOW], np.array((0, 0, 1))),
+                    'angleB': lambda: self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND]),
+                    'angleC': lambda: self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HAND]),
+                    'iterationScale': lambda: self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HIP], joints[JT.NITE_JOINT_LEFT_ELBOW]),
+                    'iterationOffsetX': lambda: self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
+                    'iterationOffsetY': lambda: self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
+                    'iterationOffsetZ': lambda: self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
+                    'trapWidth': lambda: self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND])
+                })
 
-        return {
-            'angleA': 0,
-            'angleB': 0,
-            'iterationScale': 0,
-            'iterationOffsetX': 0,
-            'iterationOffsetY': 0,
-            'iterationOffsetZ': 0,
-            'trapWidth': 0
-        }
+                return self.smoothed_inputs
+
+        self.smoothed_inputs.smooth_update({
+            'angleA': lambda: 0,
+            'angleB': lambda: 0,
+            'angleC': lambda: 0,
+            'iterationScale': lambda: 0,
+            'iterationOffsetX': lambda: 0,
+            'iterationOffsetY': lambda: 0,
+            'iterationOffsetZ': lambda: 0,
+            'trapWidth': lambda: 0
+        })
+
+        return self.smoothed_inputs
 
     def joint_distance_relative_to_reference_joint_distance(self, joint_a, joint_b, reference_joint_a, reference_joint_b, max_multiplier):
         variable_distance = self.joint_distance_in_space(joint_a, joint_b)
@@ -153,7 +193,7 @@ class SkeletonInput(Input):
         if event.text == ' ':
             self.reset_user_tracker()
 
-            
+
 class MicrosoftSkeletonInput(SkeletonInput):
 
     def __init__(self):
@@ -174,24 +214,6 @@ class MicrosoftSkeletonInput(SkeletonInput):
 
             if self.count % 30 == 0:
                 print body
-
-            # if user.skeleton.state == _nite2.NiteSkeletonState.NITE_SKELETON_TRACKED:
-            #     joints = user.skeleton.joints
-            #
-            #     user_height = self.joint_distance_in_space(joints[JT.NITE_JOINT_HEAD], joints[JT.NITE_JOINT_LEFT_FOOT])
-            #
-            #     return {
-            #         'angleA': self.joint_line_angle_relative_to_plane(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_RIGHT_ELBOW], np.array((0, 0, 1))),
-            #         'angleB': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND]),
-            #         'angleC': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_ELBOW], joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HAND]),
-            #         'iterationScale': self.joint_distance_relative_to_reference_joint_distance(joints[JT.NITE_JOINT_LEFT_HAND], joints[JT.NITE_JOINT_RIGHT_HAND], joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_SHOULDER], 3),
-            #         # 'iterationOffsetX': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_LEFT_SHOULDER], joints[JT.NITE_JOINT_LEFT_HIP], joints[JT.NITE_JOINT_LEFT_ELBOW]),
-            #         'iterationOffsetX': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
-            #         'iterationOffsetY': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
-            #         'iterationOffsetZ': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_ELBOW]),
-            #         # 'trapWidth': self.normalized_joint_distance_in_space(joints[JT.NITE_JOINT_RIGHT_HIP], joints[JT.NITE_JOINT_RIGHT_FOOT], user_height / 2, user_height)
-            #         'trapWidth': self.joint_angle_relative_to_joint(joints[JT.NITE_JOINT_RIGHT_ELBOW], joints[JT.NITE_JOINT_RIGHT_SHOULDER], joints[JT.NITE_JOINT_RIGHT_HAND])
-            #     }
 
         return {
             'angleA': 0,
