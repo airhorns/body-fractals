@@ -13,11 +13,12 @@ class Input(object):
 
 class FakeInput(Input):
 
-    def __init__(self):
+    def __init__(self, sweep=False):
         super(FakeInput, self).__init__()
+        self.sweep = sweep
         self._inputs = {
-            'angleA': 0.5 + np.sin(self.count / 180.0),
-            'angleB': 0.5 + np.sin(self.count / 120.0),
+            'angleA': 0,
+            'angleB': 0,
             'iterationScale': 0.5,
             'iterationOffset': 0.5,
             'trapWidth': 0
@@ -45,6 +46,12 @@ class FakeInput(Input):
 
     def inputs(self, elapsed, user_tracker, user_tracker_frame):
         self.count += 1
+        if self.sweep:
+            self.inputs.update({
+                'angleA': 0.5 + np.sin(self.count / 180.0),
+                'angleB': 0.5 + np.sin(self.count / 120.0),
+            })
+
         return self._inputs
 
 

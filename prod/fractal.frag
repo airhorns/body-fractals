@@ -7,7 +7,6 @@ uniform vec3 diffuse;
 uniform float ambientFactor;
 uniform bool antialias;
 uniform int distanceEstimatorFunction;
-uniform float modelScale;
 uniform float iterationScale;
 uniform float iterationOffset;
 uniform float iterations;
@@ -61,7 +60,7 @@ vec2 rotate(vec2 v, float a) {
 
 float trap(vec3 p){
   // return  length(p.x-1.0); // unit cube
-  return length(p.x-(trapWidth*modelScale)); // <- cube forms
+  return length(p.x-(trapWidth)); // <- cube forms
   // return  length(p.x-0.5-0.5*sin(time/10.0)); // <- cube forms
   // return length(p.xz-vec2(1.0,1.0))-0.05; // <- tube forms
   // return length(p); // <- no trap
@@ -76,7 +75,6 @@ float OctoKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   float pointDistance = 1000.0;
   trapDistance = vec3(1000.0, 1000.0, 1000.0);
 
-  z = z * modelScale;
   for (int n = 0; n < iterations; n++) {
     z.xz = rotate(z.xz, angleA);
     // This is octahedral symmetry,
@@ -102,7 +100,6 @@ float TetraKaleidoscopeIFS(in vec3 z, out vec3 trapDistance) {
   float pointDistance = 1000.0;
   trapDistance = vec3(1000.0, 1000.0, 1000.0);
 
-  z = z * modelScale;
   for (int n = 0; n < iterations; n++) {
     z.xz = rotate(z.xz, angleA);
     // Tetrahedral symmetry from http://www.fractalforums.com/ifs-iterated-function-systems/kaleidoscopic-(escape-time-ifs)/

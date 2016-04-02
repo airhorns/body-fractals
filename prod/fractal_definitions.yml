@@ -1,16 +1,19 @@
 octo-kfs:
   distance_estimator: 1
   params:
-    iterations: 14
+    iterations: 16
     angleA:
-      min: -3.14
-      max: 3.14
+      min: 0
+      max: 0.78539816339
+      initial: 0
     angleB:
-      min: 3.14
-      max: 3.14
+      min: 0
+      max: 0.78539816339
+      inital: 0
     iterationScale:
       min: 1
       max: 3
+      initial: 0
     iterationOffset:
       min: 1
       max: 3
@@ -26,7 +29,7 @@ tetra-kfs:
       min: -3.14
       max: 3.14
     angleB:
-      min: 3.14
+      min: -3.14
       max: 3.14
     iterationScale:
       min: 1.6

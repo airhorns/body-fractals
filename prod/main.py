@@ -2,6 +2,7 @@ from vispy import app, gloo, set_log_level
 import time
 from fractal import FractalProgram
 from skeleton_bones import SkeletonBonesProgram
+from mask import MaskProgram
 from input import SkeletonInput, FakeInput, FakeUserTracker
 from definitions import Definitions
 from primesense import openni2, nite2, _nite2
@@ -17,6 +18,8 @@ class MainCanvas(app.Canvas):
 
         self.fractal = FractalProgram(Definitions['octo-kfs'])
         self.skeleton_bones = SkeletonBonesProgram()
+        self.mask = MaskProgram()
+
         if self.fake_inputs:
             self.user_tracker = FakeUserTracker()
             self.input_manager = FakeInput()
@@ -46,12 +49,18 @@ class MainCanvas(app.Canvas):
         if not self.fake_inputs and self.draw_bones:
             self.skeleton_bones.draw(user_tracker_frame)
 
+        self.mask.draw()
+
+    def on_resize(self, event):
+        self.apply_zoom()
+
     def apply_zoom(self):
         width, height = self.physical_size
         gloo.set_viewport(0, 0, width, height)
 
         self.fractal['resolution'] = [width, height]
         self.skeleton_bones['resolution'] = [width, height]
+        self.mask['resolution'] = [width, height]
 
     def on_key_press(self, event):
         if self.fake_inputs:
@@ -70,5 +79,10 @@ if __name__ == '__main__':
     set_log_level('INFO')
     gloo.gl.use_gl('gl2 debug')
 
-    canvas = MainCanvas(size=(options.width, options.height), keys='interactive', always_on_top=True, fake_inputs=options.fake, draw_bones=options.bones)
+    canvas = MainCanvas(size=(options.width, options.height),
+                        keys='interactive',
+                        always_on_top=True,
+                        resizable=True,
+                        fake_inputs=options.fake,
+                        draw_bones=options.bones)
     app.run()
