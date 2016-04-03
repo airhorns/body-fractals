@@ -30,7 +30,7 @@ bool PointInTriangle (vec2 pt) {
 void main() {
   if (PointInTriangle(vec2(gl_FragCoord.x / resolution.x, gl_FragCoord.y / resolution.y))) {
     if ((gl_FragCoord.y / resolution.y) < (triangleC.y + 0.02)) {
-      gl_FragColor = vec4(hsv2rgb(vec3(tipColorSelector, 0.8, 0.2)), 1.0);
+      gl_FragColor = vec4(hsv2rgb(vec3(tipColorSelector, 0.8, 0.4)), 1.0);                                   
     } else {
       gl_FragColor = foregroundColor;
     }

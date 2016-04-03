@@ -8,7 +8,7 @@ from input import SkeletonInput, MicrosoftSkeletonInput, FakeInput, GroupBodyInp
 from definitions import Definitions
 
 
-KIOSK_INPUTS = [SkeletonInput, GroupBodyInputTracker, FakeInput]
+KIOSK_INPUTS = [SkeletonInput, GroupBodyInputTracker]
 
 
 class MainCanvas(app.Canvas):
@@ -18,6 +18,7 @@ class MainCanvas(app.Canvas):
         self.draw_bones = kwargs.pop('draw_bones', False)
         self.kiosk_interval = kwargs.pop('kiosk_interval', 0)
         self.start_definition = kwargs.pop('start_definition', 0)
+        self.start_input = kwargs.pop('start_input', 0)
         super(MainCanvas, self).__init__(*args, **kwargs)
         gloo.set_state(clear_color='black', blend=True, blend_func=('src_alpha', 'one_minus_src_alpha'))
 
@@ -30,6 +31,7 @@ class MainCanvas(app.Canvas):
         self._starttime = time.time()
 
         self.definition_position = self.start_definition
+        self.input_position = self.start_input
         self.rotate()
         if self.kiosk_interval > 0:
             self.kiosk_timer = app.Timer(self.kiosk_interval, connect=self.rotate, start=True)
@@ -45,21 +47,24 @@ class MainCanvas(app.Canvas):
             self.fractal.adjust(self.inputs)
         self.apply_zoom()
 
-        self.definition_position += 1
-
         # Only rotate the user tracker if there aren't users actively interacting
-        print "ROTATEROTATE: %s" % (self.input_manager)
         if (not self.input_manager) or not self.input_manager.tracking_users:
             if self.fake_inputs:
-                input_manager_index = len(KIOSK_INPUTS) - 1
+                self.input_manager = FakeInput()
             else:
-                input_manager_index = 0 #random.choice(range(len(KIOSK_INPUTS)))
+                input_manager_index = (self.input_position / 2) % len(KIOSK_INPUTS) # random.choice(range(len(KIOSK_INPUTS)))
+                self.input_manager = KIOSK_INPUTS[input_manager_index]()
+                self.mask['tipColorSelector'] = input_manager_index / float(len(KIOSK_INPUTS))
 
-            self.input_manager = KIOSK_INPUTS[input_manager_index]()
-            self.mask['tipColorSelector'] = input_manager_index / float(len(KIOSK_INPUTS))
+            print "Rotated to %s feeding %s" % (self.input_manager, definition['name'])
+
+        self.definition_position += 1
+        self.input_position += 1
+
 
     def on_draw(self, event):
         elapsed = time.time() - self._starttime
+        self.input_manager.time = elapsed
         self.fractal['time'] = elapsed
         self.fractal.draw()
 
@@ -92,7 +97,8 @@ if __name__ == '__main__':
     parser.add_option("-W", "--width", type="int", default=800)
     parser.add_option("-H", "--height", type="int", default=600)
     parser.add_option("-k", "--kiosk", type="int", default=0)
-    parser.add_option("-d", "--start", type="int", default=0)
+    parser.add_option("-d", "--start-definition", type="int", default=0)
+    parser.add_option("-i", "--start-input", type="int", default=0)
     parser.add_option("-s", "--fullscreen", default=False)
     parser.add_option("-f", "--fake", action="store_true")
     parser.add_option("-b", "--bones", action="store_true")
@@ -110,5 +116,6 @@ if __name__ == '__main__':
                         draw_bones=options.bones,
                         fullscreen=fullscreen,
                         kiosk_interval=options.kiosk,
-                        start_definition=options.start)
+                        start_definition=options.start_definition,
+                        start_input=options.start_input)
     app.run()

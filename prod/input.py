@@ -10,15 +10,14 @@ user_tracker = None
 class Input(object):
 
     def __init__(self):
-        self.count = 0
+        self.time = 0
         self.tracking_users = False
 
     def on_key_press(self, event):
         pass
 
     def inputs(self, elapsed):
-        self.count += 1
-        if self.count % 60 == 0:
+        if self.time % 60 == 0:
             print self.smoothed_inputs
 
 
@@ -63,11 +62,11 @@ class FakeInput(Input):
 
         if self.sweep:
             self.smoothed_inputs.update({
-                'angleA': 0.5 + np.sin(self.count / 3000.0) / 2,
-                'angleB': 0.5 + np.sin(self.count / 4000.0) / 2,
-                'angleC': 0.5 + np.sin(self.count / 5000.0) / 2,
-                'iterationOffsetX': 0.5 + np.sin(self.count / 6000.0) / 2,
-                'iterationOffsetY': 0.5 + np.sin(self.count / 7000.0) / 2,
+                'angleA': 0.5 + np.sin(self.time * 100) / 2,
+                'angleB': 0.5 + np.sin(self.time / 4.0) / 2,
+                'angleC': 0.5 + np.sin(self.time / 5.0) / 2,
+                'iterationOffsetX': 0.5 + np.sin(self.time / 6.0) / 2,
+                'iterationOffsetY': 0.5 + np.sin(self.time / 7.0) / 2,
             })
 
         return self.smoothed_inputs
@@ -130,8 +129,7 @@ class SkeletonInput(Input):
             if user.is_lost():
                 user_tracker.stop_skeleton_tracking(user.id)
 
-            if self.count % 30 == 0:
-                print "%s: new: %s, visible: %s, lost: %s, skeleton state: %s" % (user.id, user.is_new(), user.is_visible(), user.is_lost(), user.skeleton.state)
+            print "%s: new: %s, visible: %s, lost: %s, skeleton state: %s" % (user.id, user.is_new(), user.is_visible(), user.is_lost(), user.skeleton.state)
 
             if user.skeleton.state == _nite2.NiteSkeletonState.NITE_SKELETON_TRACKED and user.is_visible():
                 joints = user.skeleton.joints
@@ -157,14 +155,14 @@ class SkeletonInput(Input):
 
         self.tracking_users = False
         self.smoothed_inputs.smooth_update({
-            'angleA': lambda: 0,
-            'angleB': lambda: 0,
-            'angleC': lambda: 0,
-            'iterationScale': lambda: 0,
-            'iterationOffsetX': lambda: 0,
-            'iterationOffsetY': lambda: 0,
-            'iterationOffsetZ': lambda: 0,
-            'trapWidth': lambda: 0
+            'angleA': lambda: 0.5 + np.sin(self.time / 8.0) / 2,
+            'angleB': lambda: 0.5 + np.sin(self.time / 7.0) / 2,
+            'angleC': lambda: 0.5 + np.sin(self.time / 11.0) / 2,
+            'iterationScale': lambda: 0.5 + np.sin(self.time / 6.0) / 2,
+            'iterationOffsetX': lambda: 0.5 + np.sin(self.time / 6.0) / 2,
+            'iterationOffsetY': lambda: 0.5 + np.sin(self.time / 6.0) / 2,
+            'iterationOffsetZ': lambda: 0.5 + np.sin(self.time / 8.0) / 2,
+            'trapWidth': lambda: 0.5 + np.sin(self.time / 5.0) / 2,
         })
 
         return self.smoothed_inputs
@@ -216,7 +214,7 @@ class GroupBodyInputTracker(SkeletonInput):
         positions = []
 
         for user in frame.users:
-            if self.count % 30 == 0:
+            if self.time % 30 == 0:
                 print "%s: new: %s, visible: %s, lost: %s" % (user.id, user.is_new(), user.is_visible(), user.is_lost())
 
             if user.is_visible():
@@ -234,14 +232,14 @@ class GroupBodyInputTracker(SkeletonInput):
             normalized_positions = {}
 
         self.smoothed_inputs.smooth_update({
-            'angleA': lambda: normalized_positions.get(1, 0),
-            'angleB': lambda: normalized_positions.get(0, 0),
-            'angleC': lambda: normalized_positions.get(3, 0.5 + np.sin(self.count / 400.0) / 2),
-            'iterationScale': lambda: normalized_positions.get(2, 0),
-            'iterationOffsetX': lambda: normalized_positions.get(1, 0.5 + np.sin(self.count / 600.0) / 2),
-            'iterationOffsetY': lambda: normalized_positions.get(1, 0.5 + np.sin(self.count / 600.0) / 2),
-            'iterationOffsetZ': lambda: normalized_positions.get(1, 0.5 + np.sin(self.count / 600.0) / 2),
-            'trapWidth': lambda: 0.5 + np.sin(self.count / 600.0) / 2,
+            'angleA': lambda: normalized_positions.get(1, np.sin((self.time + 3) / 7.0) / 2),
+            'angleB': lambda: normalized_positions.get(0, np.sin((self.time + 3) / 9.0) / 2),
+            'angleC': lambda: normalized_positions.get(3, 0.5 + np.sin(self.time / 5.0) / 2),
+            'iterationScale': lambda: normalized_positions.get(2, 0.7 + np.sin((self.time + 3) / 9.0) / 3.3),
+            'iterationOffsetX': lambda: normalized_positions.get(0, 0.5 + np.sin(self.time / 6.0) / 2),
+            'iterationOffsetY': lambda: normalized_positions.get(0, 0.5 + np.sin(self.time / 6.0) / 2),
+            'iterationOffsetZ': lambda: normalized_positions.get(0, 0.5 + np.sin(self.time / 6.0) / 2),
+            'trapWidth': lambda: 0.5 + np.sin(self.time / 8.0) / 2,
         })
 
         return self.smoothed_inputs
@@ -254,7 +252,7 @@ class MicrosoftSkeletonInput(SkeletonInput):
         from pykinect2.PyKinectV2 import *
         from pykinect2 import PyKinectRuntime
 
-        self.count = 1
+        self.time = 1
         self.kinect = PyKinectRuntime.PyKinectRuntime(PyKinectV2.FrameSourceTypes_Body)
 
     def inputs(self, elapsed):
@@ -265,7 +263,7 @@ class MicrosoftSkeletonInput(SkeletonInput):
             if not body.is_tracked:
                 continue
 
-            if self.count % 30 == 0:
+            if self.time % 30 == 0:
                 print body
 
         return {
