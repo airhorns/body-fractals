@@ -3,4 +3,9 @@ shader-school
 *.pyc
 *.dylib
 NiTE2
+OpenNI2
 test-data/*
+*.exe
+*.dll
+*.pdb
+*.jar
