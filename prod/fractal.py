@@ -6,7 +6,7 @@ import random
 
 class FractalProgram(gloo.Program):
 
-    def __init__(self, definition):
+    def __init__(self, definition, mask=False):
         super(FractalProgram, self).__init__(read_shader('fractal.vert'), read_shader('fractal.frag'))
 
         self.definition = definition
@@ -17,8 +17,13 @@ class FractalProgram(gloo.Program):
 
         self['time'] = 0
 
-        self['cameraPos'] = (0.0, 9.0, -12.0)
-        self['cameraLookat'] = (0.0, -3.0, 0.0)
+        if mask:
+            self['cameraPos'] = (0.0, 9.0, -12.0)
+            self['cameraLookat'] = (0.0, -3.0, 0.0)
+        else:
+            self['cameraPos'] = (0.0, 6, -9.0)
+            self['cameraLookat'] = (0.0, 0.0, 0.0)
+
         self['lightDir'] = normalize(np.array((1, 1, -1.5)))  # needs to be normalized
         self['diffuse'] = (1, 1, 1)
         self['ambientFactor'] = 0.45

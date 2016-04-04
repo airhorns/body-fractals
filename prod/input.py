@@ -23,7 +23,7 @@ class Input(object):
 
 class FakeInput(Input):
 
-    def __init__(self, sweep=False):
+    def __init__(self, sweep=True):
         super(FakeInput, self).__init__()
         self.sweep = sweep
         self.smoothed_inputs = {
@@ -62,11 +62,14 @@ class FakeInput(Input):
 
         if self.sweep:
             self.smoothed_inputs.update({
-                'angleA': 0.5 + np.sin(self.time * 100) / 2,
-                'angleB': 0.5 + np.sin(self.time / 4.0) / 2,
+                'angleA': np.sin((self.time + 3) / 7.0) / 3,
+                'angleB': np.sin((self.time + 3) / 9.0) / 2,
                 'angleC': 0.5 + np.sin(self.time / 5.0) / 2,
+                'iterationScale': 0.7 + np.sin((self.time + 3) / 9.0) / 3.3,
                 'iterationOffsetX': 0.5 + np.sin(self.time / 6.0) / 2,
-                'iterationOffsetY': 0.5 + np.sin(self.time / 7.0) / 2,
+                'iterationOffsetY': 0.5 + np.sin(self.time / 6.0) / 2,
+                'iterationOffsetZ': 0.5 + np.sin(self.time / 6.0) / 2,
+                'trapWidth': 0.5 + np.sin(self.time / 8.0) / 2,
             })
 
         return self.smoothed_inputs

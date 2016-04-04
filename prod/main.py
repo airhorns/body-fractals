@@ -19,6 +19,7 @@ class MainCanvas(app.Canvas):
         self.kiosk_interval = kwargs.pop('kiosk_interval', 0)
         self.start_definition = kwargs.pop('start_definition', 0)
         self.start_input = kwargs.pop('start_input', 0)
+        self.show_mask = kwargs.pop('mask', False)
         super(MainCanvas, self).__init__(*args, **kwargs)
         gloo.set_state(clear_color='black', blend=True, blend_func=('src_alpha', 'one_minus_src_alpha'))
 
@@ -41,7 +42,7 @@ class MainCanvas(app.Canvas):
 
     def rotate(self, event=None):
         definition = Definitions[Definitions.keys()[self.definition_position % len(Definitions.keys())]]
-        self.fractal = FractalProgram(definition)
+        self.fractal = FractalProgram(definition, mask=self.show_mask)
 
         if self.inputs:
             self.fractal.adjust(self.inputs)
@@ -74,7 +75,8 @@ class MainCanvas(app.Canvas):
         if not self.fake_inputs and self.draw_bones and hasattr(self.input_manager, 'user_tracker'):
             self.skeleton_bones.draw(self.input_manager.user_tracker.read_frame())
 
-        self.mask.draw()
+        if self.show_mask:
+            self.mask.draw()
 
     def on_resize(self, event):
         self.apply_zoom()
@@ -102,6 +104,7 @@ if __name__ == '__main__':
     parser.add_option("-s", "--fullscreen", default=False)
     parser.add_option("-f", "--fake", action="store_true")
     parser.add_option("-b", "--bones", action="store_true")
+    parser.add_option("-m", "--mask", action="store_true")
 
     (options, args) = parser.parse_args()
     set_log_level('INFO')
@@ -110,12 +113,12 @@ if __name__ == '__main__':
 
     canvas = MainCanvas(size=(options.width, options.height),
                         keys='interactive',
-                        always_on_top=True,
                         resizable=True,
                         fake_inputs=options.fake,
                         draw_bones=options.bones,
                         fullscreen=fullscreen,
                         kiosk_interval=options.kiosk,
                         start_definition=options.start_definition,
+                        mask=options.mask,
                         start_input=options.start_input)
     app.run()
