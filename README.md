@@ -2,9 +2,9 @@ This is a python program that renders 3D fractals and controls the parameters wi
 
 Example images:
 
-![](http://i.giphy.com/3oGRFxnha4cVlWuutO.gif)
-![](http://i.giphy.com/l4hLWTH8b9yLDPE1G.gif)
-![](http://i.giphy.com/3oGRFg1KmJqdQUCn6w.gif)
+http://i.giphy.com/3oGRFxnha4cVlWuutO.gif
+http://i.giphy.com/l4hLWTH8b9yLDPE1G.gif
+http://i.giphy.com/3oGRFg1KmJqdQUCn6w.gif
 
 
 ### Running / browsing
