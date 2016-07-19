@@ -1,6 +1,8 @@
 from primesense import _nite2, nite2, openni2
 import numpy as np
+import random
 from utils import joint_to_array, LowConfidenceException
+import yaml
 
 JT = _nite2.NiteJointType
 
@@ -72,6 +74,41 @@ class FakeInput(Input):
                 'trapWidth': 0.5 + np.sin(self.time / 8.0) / 2,
             })
 
+        return self.smoothed_inputs
+
+
+class RandomInput(FakeInput):
+
+    def __init__(self):
+        super(RandomInput, self).__init__(sweep=False)
+
+        self.smoothed_inputs.update({
+            'angleA': random.random(),
+            'angleB': random.random(),
+            'angleC': random.random(),
+            'iterationScale': 0.4 + random.random() / 2,
+            'iterationOffsetX': 0.1 + random.random(),
+            'iterationOffsetY': 0.2 + random.random(),
+            'iterationOffsetZ': random.random(),
+            'trapWidth': random.random()
+        })
+
+    def inputs(self, elapsed):
+        return self.smoothed_inputs
+
+
+class FileStoredInput(FakeInput):
+
+    def __init__(self, file_path):
+        super(FileStoredInput, self).__init__(sweep=False)
+
+        with open(file_path, 'r') as f:
+            data = yaml.load(f)
+            self.stored_time = data.pop('time')
+            self.stored_definition_name = data.pop('definition')
+            self.smoothed_inputs.update(data)
+
+    def inputs(self, elapsed):
         return self.smoothed_inputs
 
 
